@@ -1,9 +1,9 @@
-NAME = licence_generator
+NAME = licence_scanner
 CC = cc
 CFLAGS = -Wall -Wextra -Werror
 INCLUDE = -I../include
 LDFLAGS = -lssl -lcrypto
-SRCS = generator.c \
+SRCS = licence_scanner.c \
 	../libsrc/liblicence.c
 OBJS = $(SRCS:.c=.o)
 
