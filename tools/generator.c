@@ -27,7 +27,8 @@ void initInfo(LicenceInfo *info) {
 
     mac_list = get_mac_list();
     if (mac_list == NULL) {
-        printf("%s %d %s", __FILE__, __LINE__, __func__);
+        printError(FLF, "Failed to get MAC list");
+        return;
     }
 
     while (mac_list[i] != NULL) {
