@@ -3,6 +3,7 @@
 void printError(const char* file, const int line, const char* function_name, const char* msg) {
     printf(COLOR_RED);
     fprintf(stderr, "[%s:%d] %s: %s\n", file, line, function_name, msg);
+    perror("Error");
     printf(COLOR_RESET);
 }
 
@@ -14,7 +15,6 @@ char* get_interface_names_space_separated() {
     char buf[1024] = {0};
     DIR* dp = NULL;
     struct dirent* entry = NULL;
-    // get interface name
     dp = opendir(MAC_DIR);
     if (dp == NULL) {
         printError(FLF, "Failed to open MAC directory");
@@ -105,7 +105,7 @@ char** split_string(const char* str, const char* delim) {
     return list;
 }
 
-int get_word_count(const char* str) {
+int get_word_count_space_seperated(const char* str) {
     int count = 0;
     int i = 0;
 
@@ -119,7 +119,7 @@ int get_word_count(const char* str) {
         }
         i++;
     }
-    return count + 1;
+    return count;
 }
 
 char** create_mac_list(char* interface_names, int interface_count) {
@@ -145,9 +145,10 @@ char** create_mac_list(char* interface_names, int interface_count) {
 
         fd = open(mac_path, O_RDONLY);
         if (fd < 0) {
+            perror("open");
             printError(FLF, "Failed to open MAC address file");
-            free(mac_list);
-            return NULL;
+            token = strtok_r(NULL, " ", &savetok);
+            continue;
         }
 
         read(fd, buf, sizeof(buf) - 1);
@@ -177,7 +178,7 @@ char** get_mac_list() {
         return mac_list;
     }
 
-    interface_count = get_word_count(interface_names);
+    interface_count = get_word_count_space_seperated(interface_names);
 
     mac_list = create_mac_list(interface_names, interface_count);
 
