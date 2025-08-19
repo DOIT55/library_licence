@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.sc": "c",
+        "*.p": "c",
+        "liblicence.h": "c",
+        "cstdlib": "c"
+    }
+}
