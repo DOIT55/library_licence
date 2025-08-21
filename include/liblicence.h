@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   liblicence.h                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
+/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/21 16:57:49 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/21 23:37:26 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,18 +16,17 @@
 #define LIBLICENCE_H
 
 #include <dirent.h>
+#include <fcntl.h>
+#include <linux/fs.h>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <linux/fs.h>
-
-#include <openssl/sha.h>
-#include <openssl/evp.h>
 
 #define COLOR_RESET "\033[0m"
 #define COLOR_RED "\033[31m"
@@ -40,7 +39,7 @@
 #define COLOR_BOLD "\033[1m"
 
 #define MAX_USER_NAME_LENGTH 32
-#define MAX_EQUIPMENT_NAME_LENGTH 64 
+#define MAX_EQUIPMENT_NAME_LENGTH 64
 #define UUID_LENGTH 37
 #define MAC_LENGTH 18
 #define INTERFACE_MAX_LENGTH 64
@@ -53,7 +52,6 @@
 
 #define FLF __FILE__, __LINE__, __func__
 
-
 #define MAC_DIR "/sys/class/net/"
 #define UUID_FILE_PATH "/sys/class/dmi/id/product_uuid"
 
@@ -63,12 +61,12 @@ typedef struct {
 } Interface_list_info;
 
 typedef struct {
-    char key[KEY_MAX_LENGTH];
-    char *cipher_text;
+    unsigned char key[KEY_MAX_LENGTH];
+    unsigned char cipher_text[PLAINTEXT_LENGTH * 2];
     int cipher_text_len;
-    char plain_text[PLAINTEXT_LENGTH];
+    unsigned char plain_text[PLAINTEXT_LENGTH];
     int plain_text_len;
-    char licence[LICENCE_LENGTH];
+    unsigned char licence[LICENCE_LENGTH];
 } Crypt_info;
 
 typedef struct __attribute__((packed)) {
@@ -94,6 +92,6 @@ int decryptEVP(unsigned char *szKey, unsigned char *ciphertext, int ciphertext_l
 
 bool create_sha256_signature(Equipment_info *info);
 size_t hex2bin(const char *hex, unsigned char *out);
-int bin2hex(const unsigned char *bin, size_t len, char *out);
+int bin2hex(const unsigned char *bin, size_t len, unsigned char *out);
 
 #endif

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   liblicence.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
+/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/21 12:27:21 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/21 23:16:07 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 void printError(const char* file, const int line, const char* function_name, const char* msg) {
     if (file == NULL || line == 0 || function_name == NULL) {
         printError(FLF, "Invalid error parameters");
-        return ;
+        return;
     }
     printf(COLOR_RED);
     if (msg) {
@@ -167,14 +167,16 @@ char* get_uuid() {
     return uuid;
 }
 
+// INFO : deprecated sha function 3.xx
 bool create_sha256_signature(Equipment_info* info) {
     SHA256_CTX sha256;
 
     if (!info) {
+        printError(FLF, "Invalid Equipment_info pointer");
         return false;
     }
 
-    strcpy(info->signature, DETECT_STRING);
+    memcpy(info->signature, DETECT_STRING, strlen(DETECT_STRING));
 
     if (SHA256_Init(&sha256) == false) {
         printError(FLF, "Failed to initialize SHA256");
@@ -192,7 +194,7 @@ bool create_sha256_signature(Equipment_info* info) {
     return true;
 }
 
-int bin2hex(const unsigned char* bin, size_t len, char* out) {
+int bin2hex(const unsigned char* bin, size_t len, unsigned char* out) {
     size_t i;
 
     if (bin == NULL || len == 0)
@@ -265,7 +267,7 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
     unsigned char iv[17];
 
     if (strlen((char*)key) <= 16) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Key length must be greater than 16 characters");
         return -1;
     }
     strncpy((char*)iv, (char*)key, 16);
@@ -273,12 +275,12 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
 
     /* Create and initialise the context */
     if (!(ctx = EVP_CIPHER_CTX_new())) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Failed to create cipher context");
         return -1;
     }
 
     if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Failed to initialize encryption");
         EVP_CIPHER_CTX_free(ctx);
         return -1;
     }
@@ -287,8 +289,8 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
      * EVP_EncryptUpdate can be called multiple times if necessary
      */
     if (1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len)) {
+        printError(FLF, "Failed to encrypt data");
         EVP_CIPHER_CTX_free(ctx);
-        ERR_print_errors_fp(stderr);
         return -1;
     }
     ciphertext_len = len;
@@ -297,8 +299,8 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
      * this stage.
      */
     if (1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
+        printError(FLF, "Failed to finalize encryption");
         EVP_CIPHER_CTX_free(ctx);
-        ERR_print_errors_fp(stderr);
         return -1;
     }
     ciphertext_len += len;
@@ -325,19 +327,19 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     unsigned char iv[17];
 
     if (strlen((char*)szKey) <= 16) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Key length must be greater than 16 characters");
         return -1;
     }
     strncpy((char*)iv, (char*)szKey, 16);
     iv[16] = 0;
 
     if (!(ctx = EVP_CIPHER_CTX_new())) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Failed to create cipher context");
         return -1;
     }
 
     if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, szKey, iv)) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Failed to initialize decryption");
         EVP_CIPHER_CTX_free(ctx);
         return -1;
     }
@@ -346,7 +348,7 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
      * EVP_DecryptUpdate can be called multiple times if necessary
      */
     if (1 != EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len)) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Failed to decrypt data");
         EVP_CIPHER_CTX_free(ctx);
         return -1;
     }
@@ -356,7 +358,7 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
      * this stage.
      */
     if (1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
-        ERR_print_errors_fp(stderr);
+        printError(FLF, "Failed to finalize decryption");
         EVP_CIPHER_CTX_free(ctx);
         return -1;
     }
@@ -367,7 +369,7 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     return plaintext_len;
 }
 
-/**
+/*
  * @brief you must free arr
  * @return split delim and last arr is NULL, if failed NULL
  */

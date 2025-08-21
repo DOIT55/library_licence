@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   licence_scanner.c                                  :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
+/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:36 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/21 17:23:09 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/21 23:57:58 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,23 +41,25 @@ static void get_equipment_info(Equipment_info *info) {
     char *home_path = NULL;
     char file_path[256] = {0};
     char line[256];
+    char *saveptr = NULL;
+    char *equipment_name = NULL;
+    FILE *fp = NULL;
 
     home_path = getenv("IV_HOME");
 
     sprintf(file_path, "%s/data/sysconfig", home_path);
-    // get HOSTNAME
-    FILE *fp = fopen(file_path, "r");
+
+    fp = fopen(file_path, "r");
     if (fp == NULL) {
         printError(FLF, "Failed to open sysconfig file");
         return;
     }
 
-    // TODO 문자열 조합
     while (fgets(line, sizeof(line), fp)) {
-        if (strstr(line, "HOSTNAME")) {
-            sscanf(line, "HOSTNAME=%s", info->equipment_name);
-            info->equipment_name[MAX_EQUIPMENT_NAME_LENGTH - 1] = '\0';
-            strchr(info->equipment_name, '\n')[0] = '\0';
+        if (strstr(line, "HOST_NAME")) {
+            strtok_r(line, "= \n", &saveptr);
+            equipment_name = strtok_r(NULL, "= \n", &saveptr);
+            strcpy(info->equipment_name, equipment_name);
             break;
         }
     }
@@ -88,6 +90,8 @@ static void get_equipment_info(Equipment_info *info) {
         i++;
     }
 
+    free(mac_list);
+
     printInfo(info);
 }
 
@@ -97,15 +101,14 @@ bool encrypt_aes256cbc(Crypt_info *crypt_info, const Equipment_info info) {
     }
 
     int *p_cipher_len = &crypt_info->cipher_text_len;
-    char *p_cipher_text = crypt_info->cipher_text;
-    char *p_plain_text = crypt_info->plain_text;
+    unsigned char *p_cipher_text = crypt_info->cipher_text;
+    unsigned char *p_plain_text = crypt_info->plain_text;
     int *p_plain_text_len = &crypt_info->plain_text_len;
-    char *p_key = crypt_info->key;
-
+    unsigned char *p_key = crypt_info->key;
 
     memcpy(p_plain_text, &info, sizeof(Equipment_info));
     *p_plain_text_len = sizeof(Equipment_info);
-    strcpy(p_key, PASSWORD);
+    memcpy(p_key, PASSWORD, strlen(PASSWORD));
 
     *p_cipher_len = encryptEVP(p_key, p_plain_text, *p_plain_text_len, p_cipher_text);
     if (*p_cipher_len < 0) {
@@ -116,10 +119,10 @@ bool encrypt_aes256cbc(Crypt_info *crypt_info, const Equipment_info info) {
     return true;
 }
 
-bool create_licence(const Equipment_info *equipment_info, Crypt_info *crypt_info) {
-    char *p_cipher_text = NULL;
+bool create_licence(Equipment_info *equipment_info, Crypt_info *crypt_info) {
+    unsigned char *p_cipher_text = NULL;
     int *len = NULL;
-    char *p_licence = NULL;
+    unsigned char *p_licence = NULL;
 
     if (!equipment_info || !crypt_info) {
         return false;
@@ -129,15 +132,15 @@ bool create_licence(const Equipment_info *equipment_info, Crypt_info *crypt_info
     len = &crypt_info->cipher_text_len;
     p_licence = crypt_info->licence;
 
-    if (create_sha256_signature(equipment_info)) {
+    if (create_sha256_signature(equipment_info) == false) {
         printError(FLF, "Failed to create signature");
         return false;
     }
-    if (encrypt_aes256cbc(crypt_info, *equipment_info)) {
+    if (encrypt_aes256cbc(crypt_info, *equipment_info) == false) {
         printError(FLF, "Failed to encrypt data");
         return false;
     }
-    if (bin2hex((unsigned char *)p_cipher_text, *len, p_licence) < 0){
+    if (bin2hex((unsigned char *)p_cipher_text, *len, p_licence) < 0) {
         printError(FLF, "Failed to convert hex");
         return false;
     }
@@ -145,59 +148,47 @@ bool create_licence(const Equipment_info *equipment_info, Crypt_info *crypt_info
     return true;
 }
 
-char *new_usage(char **argv) {
-    char usage_message[1024];
+static void usage(const char **argv, void (*printError)(const char *, const int, const char *, const char *)) {
+    char usage_message[1024] = {0};
     int pos = 0;
 
     pos = sprintf(usage_message, "Usage: %s [corp_email_id]\n", argv[0]);
-    pos = sprintf(usage_message, "example: %s jy.h4456\n" , argv[0]);
-
-    return usage_message;
+    pos = sprintf(usage_message + pos, "example: %s jy.h4456", argv[0]);
+    printError(FLF, usage_message);
 }
 
 bool save_licence(Crypt_info *crypt_info, const char *path) {
     int fd = 0;
-    char file_path[256] = {0};
 
     if (!crypt_info || !path) {
         printError(FLF, "Invalid parameters for save_licence");
         return false;
     }
 
-    sprintf(file_path, "%s/licence_info", path);
-    if (access(file_path, W_OK) != 0) {
-
-        //immutable file rm -rf
-
-    }
-
-    fd = open(file_path, O_WRONLY | O_CREAT | O_TRUNC, 0744);
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) {
-        printError(FLF, "Failed to open licence file");
+        printError(FLF, "Failed to open file for writing");
         return false;
     }
 
-    if (write(fd, crypt_info, sizeof(Crypt_info)) != sizeof(Crypt_info)) {
-        printError(FLF, "Failed to write to licence file");
-        goto error;
+    if (write(fd, crypt_info->licence, strlen((char *)crypt_info->licence)) < 0) {
+        printError(FLF, "Failed to write licence to file");
+        close(fd);
+        return false;
     }
-
 
     close(fd);
     return true;
-
-error:
-    close(fd);
-    return false;
 }
 
 int main(int argc, char **argv) {
     Licence_info licence_info = {0};
     Equipment_info *equipment_info = &licence_info.equipment_info;
     Crypt_info crypt_info = {0};
+    char save_path[256] = {0};
 
-    if (argc != 1) {
-        printError(FLF, new_usage(argv));
+    if (argc != 2) {
+        usage((const char **)argv, printError);
         return 0;
     }
     strcpy(licence_info.request_user_name, argv[1]);
@@ -205,10 +196,11 @@ int main(int argc, char **argv) {
 
     get_equipment_info(equipment_info);
     create_licence(equipment_info, &crypt_info);
-    save_licence(&crypt_info, argv[1]);
-    // data save immutable file
 
+    sprintf(save_path, "%s/%s/%s.info", getenv("IV_HOME"), "/data", equipment_info->equipment_name);
+    save_licence(&crypt_info, save_path);
 
+    printf(COLOR_BOLD COLOR_WHITE "Licence created successfully!\n" COLOR_RESET);
     // immutable file을 읽고
     // 복호화
     // 비교
