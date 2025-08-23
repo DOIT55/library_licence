@@ -43,3 +43,6 @@
 .env
 a.out
 sysconfig
+*.log
+code_generator
+licence_creator

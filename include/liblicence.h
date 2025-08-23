@@ -6,7 +6,7 @@
 /*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/21 23:37:26 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/24 01:40:25 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <linux/fs.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
@@ -55,19 +56,16 @@
 #define MAC_DIR "/sys/class/net/"
 #define UUID_FILE_PATH "/sys/class/dmi/id/product_uuid"
 
+typedef struct __attribute__((__packed__)) {
+    time_t request_time;
+    time_t expire_time;
+    unsigned char signature[SHA256_DIGEST_LENGTH];
+} Crypt_info;
+
 typedef struct {
     char interface_name[INTERFACE_MAX_LENGTH];
     char macaddress[MAC_LENGTH];
 } Interface_list_info;
-
-typedef struct {
-    unsigned char key[KEY_MAX_LENGTH];
-    unsigned char cipher_text[PLAINTEXT_LENGTH * 2];
-    int cipher_text_len;
-    unsigned char plain_text[PLAINTEXT_LENGTH];
-    int plain_text_len;
-    unsigned char licence[LICENCE_LENGTH];
-} Crypt_info;
 
 typedef struct __attribute__((packed)) {
     bool isRoot;
@@ -77,21 +75,17 @@ typedef struct __attribute__((packed)) {
     unsigned char signature[SIGNATURE_LENGTH];
 } Equipment_info;
 
-typedef struct {
-    char request_user_name[MAX_USER_NAME_LENGTH];
-    time_t request_time;
-    Equipment_info equipment_info;
-} Licence_info;
-
 void printError(const char *file, const int line, const char *function_name, const char *msg);
-char **get_mac_list();
-char *get_uuid();
+char **new_mac_list();
+char *new_uuid();
 
 int encryptEVP(unsigned char *key, unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext);
 int decryptEVP(unsigned char *szKey, unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext);
 
-bool create_sha256_signature(Equipment_info *info);
+bool create_sha256_signature(const void *signature_data, const char *add_str, unsigned char **out);
 size_t hex2bin(const char *hex, unsigned char *out);
 int bin2hex(const unsigned char *bin, size_t len, unsigned char *out);
+void save_file(const char *msg, const char *fullpath, const char *option);
+char *new_host_name();
 
 #endif

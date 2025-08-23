@@ -6,7 +6,7 @@
 /*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/21 23:16:07 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/24 01:47:09 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,14 +17,14 @@ void printError(const char* file, const int line, const char* function_name, con
         printError(FLF, "Invalid error parameters");
         return;
     }
-    printf(COLOR_RED);
+    fprintf(stderr, COLOR_RED);
     if (msg) {
         fprintf(stderr, "[%s:%d] %s: %s\n", file, line, function_name, msg);
     } else {
         fprintf(stderr, "[%s:%d] %s\n", file, line, function_name);
     }
     perror("INFO");
-    printf(COLOR_RESET);
+    fprintf(stderr, COLOR_RESET);
 }
 
 /**
@@ -121,7 +121,7 @@ static char** create_mac_list(char* interface_names, int interface_count) {
     return mac_list;
 }
 
-char** get_mac_list() {
+char** new_mac_list() {
     char* interface_names;
     char** mac_list = NULL;
     int interface_count = 0;
@@ -139,7 +139,7 @@ char** get_mac_list() {
     return mac_list;
 }
 
-char* get_uuid() {
+char* new_uuid() {
     char* uuid = NULL;
     int fd = 0;
     char buf[37] = {0};
@@ -167,30 +167,32 @@ char* get_uuid() {
     return uuid;
 }
 
-// INFO : deprecated sha function 3.xx
-bool create_sha256_signature(Equipment_info* info) {
+// HACK : deprecated sha function 3.xx
+bool create_sha256_signature(const void* signature_data, const char* add_str, unsigned char** out) {
     SHA256_CTX sha256;
+    char buf[1024] = {0};
 
-    if (!info) {
-        printError(FLF, "Invalid Equipment_info pointer");
+    if (!signature_data || !out) {
+        printError(FLF, "Invalid signature_data pointer");
         return false;
     }
-
-    memcpy(info->signature, DETECT_STRING, strlen(DETECT_STRING));
+    memcpy(buf, signature_data, sizeof(buf));
+    if (add_str) {
+        strncat((char*)buf, add_str, sizeof(buf) - strlen((char*)buf) - 1);
+    }
 
     if (SHA256_Init(&sha256) == false) {
         printError(FLF, "Failed to initialize SHA256");
         return false;
     }
-    if (SHA256_Update(&sha256, info, sizeof(Equipment_info)) == false) {
+    if (SHA256_Update(&sha256, buf, sizeof(buf)) == false) {
         printError(FLF, "Failed to update SHA256");
         return false;
     }
-    if (SHA256_Final(info->signature, &sha256) == false) {
+    if (SHA256_Final(*out, &sha256) == false) {
         printError(FLF, "Failed to finalize SHA256");
         return false;
     }
-
     return true;
 }
 
@@ -439,4 +441,55 @@ char** split_string(const char* str, const char* delim) {
 
     free(str_copy);
     return list;
+}
+
+/**
+ * @param msg: message to log
+ * @param fullpath: /full/path/file
+ * @param option: fopen option
+ */
+void save_file(const char* msg, const char* fullpath, const char* option) {
+    FILE* fp = NULL;
+    char cmd[512] = {0};
+    char path[256] = {0};
+
+    if (msg == NULL || fullpath == NULL || option == NULL) {
+        printError(FLF, "Invalid parameters");
+        return;
+    }
+    strncpy(path, (char*)fullpath, sizeof(path) - 1);
+    dirname((char*)path);
+
+    sprintf(cmd, "mkdir -p %s", path);
+    system(cmd);
+
+    fp = fopen(fullpath, option);
+    if (fp == NULL) {
+        printError(FLF, "Failed to open log file");
+        return;
+    }
+    fprintf(fp, "%s\n", msg);
+
+    fclose(fp);
+}
+
+char* new_host_name() {
+    char host_name[128];
+    FILE* fp = NULL;
+
+    fp = popen("grep HOST_NAME $IV_HOME/data/sysconfig | cut -d'=' -f2| tr -d [:space:]", "r");
+    if (fp == NULL) {
+        printError(FLF, "Failed to run command");
+        return NULL;
+    }
+
+    if (fgets(host_name, sizeof(host_name) - 1, fp) == NULL) {
+        printError(FLF, "Failed to read command output");
+        pclose(fp);
+        return NULL;
+    }
+
+    pclose(fp);
+
+    return strdup(host_name);
 }
