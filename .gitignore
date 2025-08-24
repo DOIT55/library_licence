@@ -46,3 +46,4 @@ sysconfig
 *.log
 code_generator
 licence_creator
+.licence

@@ -6,7 +6,7 @@
 /*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/24 01:47:09 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/24 20:17:45 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -369,78 +369,6 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     EVP_CIPHER_CTX_free(ctx);
 
     return plaintext_len;
-}
-
-/*
- * @brief you must free arr
- * @return split delim and last arr is NULL, if failed NULL
- */
-char** split_string(const char* str, const char* delim) {
-    char** list = NULL;
-    char* savetok = NULL;
-    char* token = NULL;
-    char* str_copy = NULL;
-    int count = 0;
-
-    if (str == NULL) {
-        printError(FLF, "Failed to duplicate string");
-        return NULL;
-    }
-
-    str_copy = strdup(str);
-    if (str_copy == NULL) {
-        printError(FLF, "Failed to duplicate string");
-        return NULL;
-    }
-
-    token = strtok_r(str_copy, delim, &savetok);
-    while ((token != NULL)) {
-        count++;
-        token = strtok_r(NULL, delim, &savetok);
-    }
-    if (count == 0) {
-        printError(FLF, "str not found");
-        free(str_copy);
-        return NULL;
-    }
-
-    list = malloc(sizeof(char*) * (count + 1));
-    if (list == NULL) {
-        printError(FLF, "Failed to allocate memory for list");
-        free(str_copy);
-        return NULL;
-    }
-    memset(list, 0, sizeof(char*) * (count + 1));
-
-    free(str_copy);
-    str_copy = strdup(str);
-    if (str_copy == NULL) {
-        printError(FLF, "Failed to duplicate string");
-        free(list);
-        return NULL;
-    }
-
-    count = 0;
-    token = strtok_r(str_copy, delim, &savetok);
-    while (token != NULL) {
-        list[count] = strdup(token);
-        if (list[count] == NULL) {
-            printError(FLF, "fail strdup");
-            int j = 0;
-            for (j = 0; j < count; j++) {
-                free(list[j]);
-            }
-            free(list);
-            free(str_copy);
-            return NULL;
-        }
-
-        count++;
-        token = strtok_r(NULL, delim, &savetok);
-    }
-
-    free(str_copy);
-    return list;
 }
 
 /**

@@ -6,7 +6,7 @@
 /*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/24 01:40:25 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/24 20:05:35 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,10 +43,12 @@
 #define MAX_EQUIPMENT_NAME_LENGTH 64
 #define UUID_LENGTH 37
 #define MAC_LENGTH 18
+#define AES_LENGTH 512
 #define INTERFACE_MAX_LENGTH 64
 #define PLAINTEXT_LENGTH 1024
 #define KEY_MAX_LENGTH 128
 #define LICENCE_LENGTH 512
+#define HOST_NAME_MAX 64
 #define DETECT_STRING "42"
 #define PASSWORD "he11oWor1dLicence!"
 #define SIGNATURE_LENGTH SHA256_DIGEST_LENGTH
@@ -59,13 +61,7 @@
 typedef struct __attribute__((__packed__)) {
     time_t request_time;
     time_t expire_time;
-    unsigned char signature[SHA256_DIGEST_LENGTH];
 } Crypt_info;
-
-typedef struct {
-    char interface_name[INTERFACE_MAX_LENGTH];
-    char macaddress[MAC_LENGTH];
-} Interface_list_info;
 
 typedef struct __attribute__((packed)) {
     bool isRoot;

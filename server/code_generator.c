@@ -6,7 +6,7 @@
 /*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/23 23:52:44 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/24 21:11:10 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,8 +30,6 @@ static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t
     struct tm* expire_timeinfo = NULL;
     char request_time_str[26] = {0};
     char expire_time_str[26] = {0};
-    char signature_hex[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
-    int i = 0;
 
     if (info == NULL || msg == NULL) {
         printError(FLF, "Invalid parameters");
@@ -47,24 +45,18 @@ static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t
         strcpy(expire_time_str, "no limit");
     }
 
-    for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(signature_hex + (i * 2), "%02x", info->crypt_info.signature[i]);
-    }
-
     snprintf(msg, msg_size,
              "---------------------------- [Licence Information] -------------------------------------\n"
              "User name: %s\n"
              "Equipment host name: %s\n"
              "Request time: %s\n"
              "Expire time: %s\n"
-             "Signature: %s\n"
              "Licence key: %s\n"
              "-----------------------------------------------------------------------------------------------\n",
              info->request_user_name,
              info->equipment_name,
              request_time_str,
              expire_time_str,
-             signature_hex,
              info->licence_code);
     return true;
 }
@@ -81,27 +73,17 @@ static void print_code_generator_info(const Code_generator_info* gen_info) {
 }
 
 static bool set_code_generator_info(Code_generator_info* info, char** argv) {
-    unsigned char* signature_ptr = NULL;
-    char signature_input[256] = {0};
-
     if (info == NULL || argv == NULL || argv[1] == NULL || argv[2] == NULL) {
         printError(FLF, "Invalid parameters");
         return false;
     }
 
-    signature_ptr = info->crypt_info.signature;
     memset(info, 0, sizeof(Code_generator_info));
 
     strncpy(info->request_user_name, argv[1], MAX_USER_NAME_LENGTH - 1);
     strncpy(info->equipment_name, argv[2], MAX_EQUIPMENT_NAME_LENGTH - 1);
     info->crypt_info.request_time = time(NULL);
     info->crypt_info.expire_time = 0;  // TODO: optional
-
-    sprintf(signature_input, "%s_%s", "ariel_code", info->equipment_name);
-    if (!create_sha256_signature((const void*)&info->crypt_info, signature_input, &signature_ptr)) {
-        printError(FLF, "Failed to create signature");
-        return false;
-    }
 
     return true;
 }
