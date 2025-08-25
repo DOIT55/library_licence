@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   code_generator.h                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
+/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:30 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/24 17:21:08 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/25 10:16:55 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,6 @@
 #define CODE_GENERATOR_H
 
 #include "liblicence.h"
-#define CODE_PASSWORD "he11oWor1dLicence!"
 
 typedef struct {
     char request_user_name[MAX_USER_NAME_LENGTH];

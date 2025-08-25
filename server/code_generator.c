@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   code_generator.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
+/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/24 21:11:10 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/25 10:16:25 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,7 +96,7 @@ static bool create_code(Code_generator_info* info) {
         return false;
     }
 
-    if (encryptEVP((unsigned char*)CODE_PASSWORD, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf) < 0) {
+    if (encryptEVP((unsigned char*)PASSWORD, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf) < 0) {
         return false;
     }
 

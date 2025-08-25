@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   liblicence.h                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
+/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/24 20:05:35 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/25 10:16:44 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,6 @@
 #define KEY_MAX_LENGTH 128
 #define LICENCE_LENGTH 512
 #define HOST_NAME_MAX 64
-#define DETECT_STRING "42"
 #define PASSWORD "he11oWor1dLicence!"
 #define SIGNATURE_LENGTH SHA256_DIGEST_LENGTH
 
@@ -57,19 +56,18 @@
 
 #define MAC_DIR "/sys/class/net/"
 #define UUID_FILE_PATH "/sys/class/dmi/id/product_uuid"
-
+typedef struct {
+    char **mac_list;
+    char *host_name;
+    char *uuid;
+    char hax_code[SHA256_DIGEST_LENGTH * 2 + 1];
+    char signature_row[AES_LENGTH + MAC_LENGTH + UUID_LENGTH + HOST_NAME_MAX];
+    unsigned char sha256_signature[SHA256_DIGEST_LENGTH * 2 + 1];
+} Licence_info;
 typedef struct __attribute__((__packed__)) {
     time_t request_time;
     time_t expire_time;
 } Crypt_info;
-
-typedef struct __attribute__((packed)) {
-    bool isRoot;
-    char equipment_name[MAX_EQUIPMENT_NAME_LENGTH];
-    char mac[MAC_LENGTH];
-    char uuid[UUID_LENGTH];
-    unsigned char signature[SIGNATURE_LENGTH];
-} Equipment_info;
 
 void printError(const char *file, const int line, const char *function_name, const char *msg);
 char **new_mac_list();
@@ -78,10 +76,11 @@ char *new_uuid();
 int encryptEVP(unsigned char *key, unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext);
 int decryptEVP(unsigned char *szKey, unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext);
 
-bool create_sha256_signature(const void *signature_data, const char *add_str, unsigned char **out);
+bool create_sha256_signature(const void *signature_data, const char *add_str, unsigned char *out);
 size_t hex2bin(const char *hex, unsigned char *out);
 int bin2hex(const unsigned char *bin, size_t len, unsigned char *out);
 void save_file(const char *msg, const char *fullpath, const char *option);
 char *new_host_name();
+bool init_licence_info(Licence_info *licence_info, char *licence_code);
 
 #endif

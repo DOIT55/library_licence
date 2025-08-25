@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   liblicence.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
+/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/24 20:17:45 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/25 10:33:28 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -168,28 +168,40 @@ char* new_uuid() {
 }
 
 // HACK : deprecated sha function 3.xx
-bool create_sha256_signature(const void* signature_data, const char* add_str, unsigned char** out) {
+bool create_sha256_signature(const void* signature_data, const char* add_str, unsigned char* out) {
     SHA256_CTX sha256;
     char buf[1024] = {0};
+    size_t remaining = 0;
 
     if (!signature_data || !out) {
         printError(FLF, "Invalid signature_data pointer");
         return false;
     }
-    memcpy(buf, signature_data, sizeof(buf));
+
+    // signature_data의 실제 길이만 복사 (문자열이라고 가정)
+    size_t data_len = strlen((const char*)signature_data);
+    if (data_len >= sizeof(buf)) {
+        printError(FLF, "Signature data too long");
+        return false;
+    }
+
+    memcpy(buf, signature_data, data_len);
+    buf[data_len] = '\0';  // null terminator 추가
+
     if (add_str) {
-        strncat((char*)buf, add_str, sizeof(buf) - strlen((char*)buf) - 1);
+        remaining = sizeof(buf) - data_len - 1;
+        strncat((char*)buf, add_str, remaining);
     }
 
     if (SHA256_Init(&sha256) == false) {
         printError(FLF, "Failed to initialize SHA256");
         return false;
     }
-    if (SHA256_Update(&sha256, buf, sizeof(buf)) == false) {
+    if (SHA256_Update(&sha256, buf, strlen(buf)) == false) {
         printError(FLF, "Failed to update SHA256");
         return false;
     }
-    if (SHA256_Final(*out, &sha256) == false) {
+    if (SHA256_Final(out, &sha256) == false) {
         printError(FLF, "Failed to finalize SHA256");
         return false;
     }
@@ -420,4 +432,29 @@ char* new_host_name() {
     pclose(fp);
 
     return strdup(host_name);
+}
+
+bool init_licence_info(Licence_info* licence_info, char* licence_code) {
+    char** sha_signature = NULL;
+
+    if (licence_info == NULL || licence_code == NULL) {
+        printError(FLF, "Invalid Licence_info pointer");
+        return false;
+    }
+
+    memset(licence_info, 0, sizeof(Licence_info));
+
+    licence_info->mac_list = new_mac_list();
+    licence_info->uuid = new_uuid();
+    licence_info->host_name = new_host_name();
+    strcpy(licence_info->hax_code, licence_code);
+
+    sprintf(licence_info->signature_row, "%s%s%s%s", licence_info->host_name, licence_info->mac_list[0], licence_info->hax_code, licence_info->uuid);
+
+    create_sha256_signature((const void*)licence_info->signature_row, NULL, licence_info->sha256_signature);
+
+    // TODO: delete
+    printf("row data : %s", licence_info->signature_row);
+
+    return true;
 }

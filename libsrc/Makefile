@@ -1,10 +1,10 @@
-NAME = licence_generator
+NAME = test_main
 CC = cc
 #CFLAGS = -Wall -Wextra -Werror
 CFLAGS = -Wall -Wextra  -g3 -fsanitize=address # sha256 is not supported in -Werror
 INCLUDE = -I../include
 LDFLAGS = -lssl -lcrypto
-SRCS = licence_generator.c \
+SRCS = test_main.c \
 			../libsrc/liblicence.c
 OBJS = $(SRCS:.c=.o)
 
