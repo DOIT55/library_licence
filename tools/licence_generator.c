@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 23:27:31 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/25 10:12:40 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/25 11:08:54 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,7 +43,7 @@ static bool create_licence_file(Licence_info *licence_info) {
 
     save_file(licence_info->hax_code, fullpath, "w");
     save_file("\n", fullpath, "a");
-    save_file(licence_info->sha256_signature, fullpath, "a");
+    save_file((char *)licence_info->sha256_signature, fullpath, "a");
 
     return true;
 }
