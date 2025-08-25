@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/25 12:39:48 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/25 15:08:17 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,13 +14,17 @@
 
 #include "liblicence.h"
 
-static void usage(const char** argv, void (*printError)(const char*, const int, const char*, const char*)) {
+static void usage(const char** argv) {
     char usage_message[1024] = {0};
     int pos = 0;
 
-    pos = sprintf(usage_message, "Usage: %s [corp_email_id] [sysconfig_host_name]\n", argv[0]);
-    pos = sprintf(usage_message + pos, "example: %s jy.h4456 emgcA\n", argv[0]);
-    printError(FLF, usage_message);
+    pos += sprintf(usage_message, "%s [corp_email_id] [sysconfig_host_name][option]\n", argv[0]);
+    pos += sprintf(usage_message + pos, "example\t: %s jy.h4456 emgcA -y 2 -m 6 -d 3\n", argv[0]);
+    pos += sprintf(usage_message + pos, "\nOption\n"
+                                        "\t-y : expire year\n"
+                                        "\t-m : expire month\n"
+                                        "\t-d : expire day\n");
+    printf(COLOR_RED"Usage\t: %s"COLOR_RESET, usage_message);
 }
 
 static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t msg_size) {
@@ -72,7 +76,10 @@ static void print_code_generator_info(const Code_generator_info* gen_info) {
     printf(COLOR_GREEN "%s" COLOR_RESET, msg);
 }
 
-static bool set_code_generator_info(Code_generator_info* info, char** argv) {
+static bool set_code_generator_info(Code_generator_info* info, int argc, char** argv) {
+    int i = 0;
+    int is_option = 0;
+
     if (info == NULL || argv == NULL || argv[1] == NULL || argv[2] == NULL) {
         printError(FLF, "Invalid parameters");
         return false;
@@ -80,10 +87,47 @@ static bool set_code_generator_info(Code_generator_info* info, char** argv) {
 
     memset(info, 0, sizeof(Code_generator_info));
 
-    strncpy(info->request_user_name, argv[1], MAX_USER_NAME_LENGTH - 1);
-    strncpy(info->equipment_name, argv[2], MAX_EQUIPMENT_NAME_LENGTH - 1);
+    while (i < argc) {
+        if (strncmp("-", argv[i], 1) == 0) {
+            switch (argv[i][1]) {
+                case 'y':
+                    if (i + 1 < argc) {
+                        info->crypt_info.expire_time += atoi(argv[i + 1]) * 365 * 24 * 60 * 60;
+                    }
+                    break;
+                case 'm':
+                    if (i + 1 < argc) {
+                        info->crypt_info.expire_time += atoi(argv[i + 1]) * 30 * 24 * 60 * 60;
+                    }
+                    break;
+                case 'd':
+                    if (i + 1 < argc) {
+                        info->crypt_info.expire_time += atoi(argv[i + 1]) * 24 * 60 * 60;
+                    }
+                    break;
+            }
+            is_option = 1;
+        } else {
+            if (info->request_user_name[0] == '\0') {
+                strncpy(info->request_user_name, argv[1], MAX_USER_NAME_LENGTH - 1);
+            } else {
+                strncpy(info->equipment_name, argv[2], MAX_EQUIPMENT_NAME_LENGTH - 1);
+            }
+        }
+        i++;
+    }
+
     info->crypt_info.request_time = time(NULL);
-    info->crypt_info.expire_time = 0;  // TODO: optional
+    if (is_option) {
+        info->crypt_info.expire_time += info->crypt_info.request_time;
+        if ((info->crypt_info.request_time >= info->crypt_info.expire_time)) {
+            printError(FLF, "Invalid expire time");
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        info->crypt_info.expire_time = 0;
+    }
+
 
     return true;
 }
@@ -133,12 +177,12 @@ static void save_code_generator_log_file(const Code_generator_info* info) {
 int main(int argc, char** argv) {
     Code_generator_info licence_info;
 
-    if ((2 < argc && argc < 4) == false) {
-        usage((const char**)argv, printError);
+    if ((2 < argc && argc <  10) == false) {
+        usage((const char**)argv);
         return EXIT_FAILURE;
     }
 
-    if (!set_code_generator_info(&licence_info, argv)) {
+    if (!set_code_generator_info(&licence_info, argc, argv)) {
         printError(FLF, "Failed to set generator info");
         return EXIT_FAILURE;
     }

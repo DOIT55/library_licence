@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 23:27:31 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/25 11:08:54 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/25 14:27:00 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,8 +17,8 @@ static void usage(const char **argv, void (*printError)(const char *, const int,
     char usage_message[1024] = {0};
     int pos = 0;
 
-    pos = sprintf(usage_message, "Usage: %s [licence_code]\n", argv[0]);
-    pos = sprintf(usage_message + pos, "example: %s 93A01F6BA.. \n", argv[0]);
+    pos += sprintf(usage_message, "Usage: %s [licence_code]\n", argv[0]);
+    pos += sprintf(usage_message + pos, "example: %s 93A01F6BA.. \n", argv[0]);
     printError(FLF, usage_message);
 }
 
