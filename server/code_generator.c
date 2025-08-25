@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/25 10:16:25 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/25 12:39:48 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,7 @@ static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t
              "Equipment host name: %s\n"
              "Request time: %s\n"
              "Expire time: %s\n"
-             "Licence key: %s\n"
+             "Licence code: %s\n"
              "-----------------------------------------------------------------------------------------------\n",
              info->request_user_name,
              info->equipment_name,
@@ -131,7 +131,7 @@ static void save_code_generator_log_file(const Code_generator_info* info) {
 }
 
 int main(int argc, char** argv) {
-    Code_generator_info licence_info = {0};
+    Code_generator_info licence_info;
 
     if ((2 < argc && argc < 4) == false) {
         usage((const char**)argv, printError);

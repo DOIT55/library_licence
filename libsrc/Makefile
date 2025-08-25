@@ -3,14 +3,13 @@ AR_FLAGS = rcs
 NAME = test_main
 LIB_NAME = liblicence.a
 CC = cc
-CFLAGS = -Wall -Wextra  -g3 -fsanitize=address
+CFLAGS = -Wall -Wextra -Werror #-g3 -fsanitize=address
 INCLUDE = -I../include
-LDFLAGS = -lssl -lcrypto -llicence
+LDFLAGS = -llicence -lssl -lcrypto 
 
 LIB_SRCS = liblicence.c
 LIB_OBJS = $(LIB_SRCS:.c=.o)
 
-# 테스트 프로그램 소스 파일들
 TEST_SRCS = test_main.c
 TEST_OBJS = $(TEST_SRCS:.c=.o)
 
@@ -18,16 +17,11 @@ TEST_OBJS = $(TEST_SRCS:.c=.o)
 
 all: $(LIB_NAME)
 
-# 정적 라이브러리 생성
 $(LIB_NAME): $(LIB_OBJS)
 	$(AR) $(AR_FLAGS) $@ $^
 	mkdir -p ../lib
-	cp $@ ../lib
+	cp -f $@ ../lib
 	@echo "Static library $(LIB_NAME) created successfully"
-
-# 테스트 프로그램 생성 (정적 라이브러리 사용)
-$(NAME): $(TEST_OBJS) $(LIB_NAME)
-	$(CC) $(CFLAGS) $(LIBRARY) -o $@ $(TEST_OBJS) -L. $(LDFLAGS)
 
 lib: $(LIB_NAME)
 
@@ -38,9 +32,6 @@ clean:
 	rm -f $(LIB_OBJS) $(TEST_OBJS)
 
 fclean: clean
-	rm -f $(NAME) $(LIB_NAME)
+	rm -f $(LIB_NAME)
 
 re: fclean all
-
-test: $(NAME)
-	./$(NAME)

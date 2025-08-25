@@ -47,3 +47,5 @@ sysconfig
 code_generator
 licence_creator
 .licence
+.licence_generator
+test_main

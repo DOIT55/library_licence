@@ -9,6 +9,7 @@
         "ioctl-types.h": "c",
         "ttydefaults.h": "c",
         "features.h": "c",
-        "fs.h": "c"
+        "fs.h": "c",
+        "code_generator.h": "c"
     }
 }

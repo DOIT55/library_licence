@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/25 10:16:44 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/25 14:11:47 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,11 @@
 
 #define MAC_DIR "/sys/class/net/"
 #define UUID_FILE_PATH "/sys/class/dmi/id/product_uuid"
+#if OPENSSL_VERSION_NUMBER < 30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+    #define USE_NEW_SHA256 0
+#else
+    #define USE_NEW_SHA256 1
+#endif
 typedef struct {
     char **mac_list;
     char *host_name;
@@ -82,5 +87,6 @@ int bin2hex(const unsigned char *bin, size_t len, unsigned char *out);
 void save_file(const char *msg, const char *fullpath, const char *option);
 char *new_host_name();
 bool init_licence_info(Licence_info *licence_info, char *licence_code);
+void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char **argv, char **envp, int check_time);
 
 #endif
