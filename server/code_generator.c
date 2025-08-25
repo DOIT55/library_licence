@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/25 15:08:17 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/25 16:03:43 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,6 +103,11 @@ static bool set_code_generator_info(Code_generator_info* info, int argc, char** 
                 case 'd':
                     if (i + 1 < argc) {
                         info->crypt_info.expire_time += atoi(argv[i + 1]) * 24 * 60 * 60;
+                    }
+                    break;
+                case 's':
+                    if (i + 1 < argc) {
+                        info->crypt_info.expire_time += atoi(argv[i + 1]);
                     }
                     break;
             }
