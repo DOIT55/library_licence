@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/25 16:03:43 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 11:51:02 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,7 @@ static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t
              "Request time: %s\n"
              "Expire time: %s\n"
              "Licence code: %s\n"
-             "-----------------------------------------------------------------------------------------------\n",
+             "----------------------------------------------------------------------------------------\n",
              info->request_user_name,
              info->equipment_name,
              request_time_str,
@@ -106,6 +106,7 @@ static bool set_code_generator_info(Code_generator_info* info, int argc, char** 
                     }
                     break;
                 case 's':
+                    printError(FLF, "test option, not use");
                     if (i + 1 < argc) {
                         info->crypt_info.expire_time += atoi(argv[i + 1]);
                     }
@@ -114,9 +115,9 @@ static bool set_code_generator_info(Code_generator_info* info, int argc, char** 
             is_option = 1;
         } else {
             if (info->request_user_name[0] == '\0') {
-                strncpy(info->request_user_name, argv[1], MAX_USER_NAME_LENGTH - 1);
+                strncpy(info->request_user_name, argv[i], MAX_USER_NAME_LENGTH - 1);
             } else {
-                strncpy(info->equipment_name, argv[2], MAX_EQUIPMENT_NAME_LENGTH - 1);
+                strncpy(info->equipment_name, argv[i], MAX_EQUIPMENT_NAME_LENGTH - 1);
             }
         }
         i++;
@@ -139,17 +140,19 @@ static bool set_code_generator_info(Code_generator_info* info, int argc, char** 
 
 static bool create_code(Code_generator_info* info) {
     char buf[1024] = {0};
+    int len = 0;
 
     if (info == NULL) {
         printError(FLF, "Invalid Code_generator_info pointer");
         return false;
     }
 
-    if (encryptEVP((unsigned char*)PASSWORD, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf) < 0) {
+    len = encryptEVP((unsigned char*)PASSWORD, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf);
+    if (len < 0) {
         return false;
     }
 
-    if (bin2hex((unsigned char*)buf, strlen(buf), info->licence_code) < 0) {
+    if (bin2hex((unsigned char*)buf, len, info->licence_code) < 0) {
         return false;
     }
 
@@ -176,7 +179,7 @@ static void save_code_generator_log_file(const Code_generator_info* info) {
              getenv("IV_HOME"), "log/CODE_GENERATOR/", "code_generator_", time_str);
 
     gen_generator_msg(info, buf, sizeof(buf));
-    save_file(buf, fullpath, "a");
+    save_file(buf, strlen(buf), fullpath, O_CREAT | O_APPEND | O_WRONLY);
 }
 
 int main(int argc, char** argv) {

@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/25 14:11:47 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 11:38:26 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,7 @@ typedef struct {
     char **mac_list;
     char *host_name;
     char *uuid;
-    char hax_code[SHA256_DIGEST_LENGTH * 2 + 1];
+    char hex_code[SHA256_DIGEST_LENGTH * 2 + 1];
     char signature_row[AES_LENGTH + MAC_LENGTH + UUID_LENGTH + HOST_NAME_MAX];
     unsigned char sha256_signature[SHA256_DIGEST_LENGTH * 2 + 1];
 } Licence_info;
@@ -84,9 +84,10 @@ int decryptEVP(unsigned char *szKey, unsigned char *ciphertext, int ciphertext_l
 bool create_sha256_signature(const void *signature_data, const char *add_str, unsigned char *out);
 size_t hex2bin(const char *hex, unsigned char *out);
 int bin2hex(const unsigned char *bin, size_t len, unsigned char *out);
-void save_file(const char *msg, const char *fullpath, const char *option);
+void save_file(const char* msg, int msg_len, const char* fullpath, int option);
 char *new_host_name();
 bool init_licence_info(Licence_info *licence_info, char *licence_code);
 void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char **argv, char **envp, int check_time);
+void hex_dump(const void* data, size_t size, const char* label);
 
 #endif

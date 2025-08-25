@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 23:27:31 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/25 14:27:00 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 11:31:09 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,9 +41,8 @@ static bool create_licence_file(Licence_info *licence_info) {
 
     sprintf(fullpath, "%s/%s/%s", getenv("IV_HOME"), "data", ".licence");
 
-    save_file(licence_info->hax_code, fullpath, "w");
-    save_file("\n", fullpath, "a");
-    save_file((char *)licence_info->sha256_signature, fullpath, "a");
+    save_file(licence_info->hex_code, sizeof(licence_info->hex_code),fullpath, O_CREAT | O_WRONLY | O_TRUNC);
+    save_file((char *)licence_info->sha256_signature, sizeof(licence_info->sha256_signature), fullpath, O_APPEND | O_WRONLY);
 
     return true;
 }
@@ -58,12 +57,6 @@ int main(int argc, char **argv) {
 
     init_licence_info(&licence_info, argv[1]);
     create_licence_file(&licence_info);
-    
-    //debug
-    // char buf[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
-    // bin2hex(licence_info.sha256_signature, SHA256_DIGEST_LENGTH, (unsigned char *)buf);
-    // printf("SHA256 Signature: %s\n", buf);
-
     free_allocation(licence_info);
     return 0;
 }

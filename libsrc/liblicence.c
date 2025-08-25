@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/25 13:54:32 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 11:46:47 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,6 @@ void printError(const char* file, const int line, const char* function_name, con
     } else {
         fprintf(stderr, "[%s:%d] %s\n", file, line, function_name);
     }
-    perror("INFO");
     fprintf(stderr, COLOR_RESET);
 }
 
@@ -172,7 +171,7 @@ char* new_uuid() {
         char buf[1024] = {0};
         size_t remaining = 0;
 
-        printf("openssl ver %s\n", OPENSSL_VERSION_TEXT);
+        printf("%s\n", OPENSSL_VERSION_TEXT);
 
         if (!signature_data || !out) {
             printError(FLF, "Invalid signature_data pointer");
@@ -231,6 +230,7 @@ char* new_uuid() {
             return false;
         }
 
+        printf("%s\n", OPENSSL_VERSION_TEXT);
         size_t data_len = strlen((const char*)signature_data);
         if (data_len >= sizeof(buf)) {
             printError(FLF, "Signature data too long");
@@ -439,15 +439,16 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
 
 /**
  * @param msg: message to log
+ * @param msg_len: length of the message
  * @param fullpath: /full/path/file
  * @param option: fopen option
  */
-void save_file(const char* msg, const char* fullpath, const char* option) {
-    FILE* fp = NULL;
+void save_file(const char* msg, int msg_len, const char* fullpath, int option) {
+    int fd = -1;
     char cmd[512] = {0};
     char path[256] = {0};
 
-    if (msg == NULL || fullpath == NULL || option == NULL) {
+    if (msg == NULL || fullpath == NULL ) {
         printError(FLF, "Invalid parameters");
         return;
     }
@@ -456,15 +457,13 @@ void save_file(const char* msg, const char* fullpath, const char* option) {
 
     sprintf(cmd, "mkdir -p %s", path);
     system(cmd);
-
-    fp = fopen(fullpath, option);
-    if (fp == NULL) {
+    fd = open(fullpath, option);
+    if (fd == -1) {
         printError(FLF, "Failed to open log file");
         return;
     }
-    fprintf(fp, "%s\n", msg);
-
-    fclose(fp);
+    write(fd, msg, msg_len);
+    close(fd);
 }
 
 char* new_host_name() {
@@ -499,9 +498,10 @@ bool init_licence_info(Licence_info* licence_info, char* licence_code) {
     licence_info->mac_list = new_mac_list();
     licence_info->uuid = new_uuid();
     licence_info->host_name = new_host_name();
-    strcpy(licence_info->hax_code, licence_code);
+    memcpy(licence_info->hex_code, licence_code, strlen(licence_code));
 
-    sprintf(licence_info->signature_row, "%s%s%s%s", licence_info->host_name, licence_info->mac_list[0], licence_info->hax_code, licence_info->uuid);
+    sprintf(licence_info->signature_row, "%s%s%s%s",
+         licence_info->host_name, licence_info->mac_list[0], licence_info->hex_code, licence_info->uuid);
 
     create_sha256_signature((const void*)licence_info->signature_row, NULL, licence_info->sha256_signature);
 
@@ -510,15 +510,71 @@ bool init_licence_info(Licence_info* licence_info, char* licence_code) {
     return true;
 }
 
+
+/**
+ * @brief 버퍼 내용을 헥사 덤프 형태로 출력
+ * @param data 덤프할 데이터 포인터
+ * @param size 데이터 크기
+ * @param label 출력할 레이블 (NULL 가능)
+ */
+void hex_dump(const void* data, size_t size, const char* label) {
+    const unsigned char* bytes = (const unsigned char*)data;
+    size_t i, j;
+    
+    if (!data) {
+        printf("hex_dump: NULL data pointer\n");
+        return;
+    }
+    
+    if (label) {
+        printf(COLOR_CYAN "=== %s ===" COLOR_RESET "\n", label);
+    }
+    
+    printf("Size: %zu bytes\n", size);
+    printf("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ASCII\n");
+    printf("--------  --------------------------------  --------------------------------  ----------------\n");
+    
+    for (i = 0; i < size; i += 16) {
+        // 오프셋 출력
+        printf("%08zX  ", i);
+        
+        // 헥사 값 출력 (16바이트씩)
+        for (j = 0; j < 16; j++) {
+            if (i + j < size) {
+                printf("%02X ", bytes[i + j]);
+            } else {
+                printf("   ");  // 빈 공간
+            }
+            
+            // 8바이트마다 구분자 추가
+            if (j == 7) {
+                printf(" ");
+            }
+        }
+        
+        printf(" ");
+        
+        // ASCII 문자 출력
+        for (j = 0; j < 16 && i + j < size; j++) {
+            char c = bytes[i + j];
+            printf("%c", (c >= 32 && c <= 126) ? c : '.');
+        }
+        
+        printf("\n");
+    }
+    printf("\n");
+}
+
+
 time_t licence_check() {
     Licence_info licence_info = {0};
     Crypt_info crypt_info = {0};
     char fullpath[64] = {0};
     int fd = 0;
-    char buf[512] = {0};
+    char buf[1024] = {0};
     char sha256[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
-    char *newline_pos = NULL;
     char **free_ptr = NULL;
+    int len = 0;
 
     sprintf(fullpath, "%s/%s/%s", getenv("IV_HOME"), "data", ".licence");
 
@@ -528,23 +584,28 @@ time_t licence_check() {
         exit(EXIT_FAILURE);
     }
     read(fd, buf, sizeof(buf) - 1);
+    
+    hex_dump(buf, 200, "Licence File");//debug
 
-    newline_pos = strchr(buf, '\n');
-    if (newline_pos) {
-        *newline_pos = '\0';
-        strcpy(sha256, newline_pos + 1);
-    } else {
-        printError(FLF, "Invalid licence");
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
+    len = strlen(buf);
+
+    memcpy(sha256, buf + len + 1, SHA256_DIGEST_LENGTH);
+
+    //debug code
+    hex_dump(sha256, SHA256_DIGEST_LENGTH, "SHA256");
+
+    //debug EOF
 
     if (!init_licence_info(&licence_info, buf)) {
         printError(FLF, "Failed to initialize licence info");
         exit(EXIT_FAILURE);
     }
+    //debug code
+    hex_dump(licence_info.sha256_signature, SHA256_DIGEST_LENGTH, "licence info sha256");
+    hex_dump(sha256, SHA256_DIGEST_LENGTH, "SHA256");
+    //debug EOF
 
-    if (!memcmp(licence_info.sha256_signature, newline_pos + 1, SHA256_DIGEST_LENGTH * 2)) {
+    if (memcmp(licence_info.sha256_signature, sha256, SHA256_DIGEST_LENGTH)) {
         printError(FLF, "Invalid licence");
         exit(EXIT_FAILURE);
     }
@@ -561,7 +622,21 @@ time_t licence_check() {
     licence_info.host_name = NULL;
     licence_info.uuid = NULL;
 
-    decryptEVP((unsigned char *)PASSWORD, (unsigned char *)licence_info.hax_code, strlen(licence_info.hax_code), (unsigned char *)&crypt_info);
+    //TODO :delete
+    Crypt_info info_debug = {0};
+    unsigned char *tmp = (unsigned char *)buf;
+    memset(buf, 0, sizeof(buf));
+    len = 0;
+
+    len = hex2bin((char *)licence_info.hex_code, tmp);
+    decryptEVP((unsigned char *)PASSWORD, tmp, len, (unsigned char*)&info_debug);
+
+    printf("debug expire :%ld\n", info_debug.expire_time);
+    printf("debug publish :%ld\n", info_debug.request_time);
+
+    hex_dump(tmp, len, "Decrypted Licence");//debug
+    exit(1);
+    //TODO :debug
 
     return crypt_info.expire_time;
 }
@@ -581,8 +656,10 @@ void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char
     now = time(NULL);
     licence_check_time = now + check_time;
     expire_date = licence_check();
-
-    if (check_time < 1 || expire_date) {
+    if (expire_date < 0) {
+        printError(FLF, "Invalid licence");
+        exit(EXIT_FAILURE);
+    } else if (check_time < 1) {
         while (true) {
             run_main_func(argc, argv, envp);
         }
