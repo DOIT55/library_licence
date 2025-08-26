@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 18:33:32 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 20:40:25 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -170,6 +170,7 @@ char* new_uuid() {
         EVP_MD_CTX* ctx = NULL;
         char buf[1024] = {0};
         size_t remaining = 0;
+        size_t data_len = 0;
 
         printf("%s\n", OPENSSL_VERSION_TEXT);
 
@@ -178,7 +179,7 @@ char* new_uuid() {
             return false;
         }
 
-        size_t data_len = strlen((const char*)signature_data);
+        data_len = strlen((const char*)signature_data);
         if (data_len >= sizeof(buf)) {
             printError(FLF, "Signature data too long");
             return false;
@@ -575,6 +576,7 @@ time_t licence_check() {
     char sha256[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
     char **free_ptr = NULL;
     int len = 0;
+    char *password = NULL;
 
     sprintf(fullpath, "%s/%s/%s", getenv("IV_HOME"), "data", ".licence");
 
@@ -583,16 +585,30 @@ time_t licence_check() {
         printError(FLF, "Failed to open licence file");
         exit(EXIT_FAILURE);
     }
-    read(fd, buf, sizeof(buf) - 1);
-    
-    len = strlen(buf);
+    len = read(fd, buf, sizeof(buf) - 1);
 
-    memcpy(sha256, buf + len + 1, SHA256_DIGEST_LENGTH);
+    //debug
+    printf("read_len : %d\n", len);
+    hex_dump(buf,128, "get file");
+    //debug eof
+
+    memcpy(sha256, buf, SHA256_DIGEST_LENGTH);
+    memcpy(licence_info.aes_row, buf + SHA256_DIGEST_LENGTH, len - SHA256_DIGEST_LENGTH);
+
+    memset(buf, 0, sizeof(buf));
+    bin2hex(licence_info.aes_row, len - SHA256_DIGEST_LENGTH, (unsigned char*)buf);
+
+    printf("hex code : %s\n", buf); //debug
 
     if (!init_licence_info(&licence_info, buf)) {
         printError(FLF, "Failed to initialize licence info");
         exit(EXIT_FAILURE);
     }
+
+    //debug
+    hex_dump((char *)licence_info.sha256_signature, SHA256_DIGEST_LENGTH, "licence_info.sha256");
+    hex_dump(sha256, SHA256_DIGEST_LENGTH, "file sha256");
+    //debug eof
 
     if (memcmp(licence_info.sha256_signature, sha256, SHA256_DIGEST_LENGTH)) {
         printError(FLF, "Invalid licence");
@@ -613,7 +629,8 @@ time_t licence_check() {
 
     len = hex2bin((char *)licence_info.hex_code, (unsigned char *)buf);
 
-    char *password = "helloworld12345678901234567890142";
+
+    password = "helloworld12345678901234567890142";
     if (decryptEVP((unsigned char *)password, (unsigned char*)buf, len, (unsigned char*)&crypt_info) < 0) {
         printError(FLF, "Failed to decrypt licence");
         exit(1);

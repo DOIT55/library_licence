@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 17:43:51 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 19:01:20 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,6 +67,7 @@ typedef struct {
     char *uuid;
     char hex_code[SHA256_DIGEST_LENGTH * 2 + 1];
     char signature_row[AES_LENGTH + MAC_LENGTH + UUID_LENGTH + HOST_NAME_MAX];
+    unsigned char aes_row[512];
     unsigned char sha256_signature[SHA256_DIGEST_LENGTH * 2 + 1];
 } Licence_info;
 typedef struct __attribute__((__packed__)) {

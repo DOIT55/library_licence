@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/26 17:40:59 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 20:00:19 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -141,13 +141,14 @@ static bool set_code_generator_info(Code_generator_info* info, int argc, char** 
 static bool create_code(Code_generator_info* info) {
     char buf[1024] = {0};
     int len = 0;
+    char *password = NULL;
 
     if (info == NULL) {
         printError(FLF, "Invalid Code_generator_info pointer");
         return false;
     }
 
-    char *password = "helloworld12345678901234567890142";
+    password = "helloworld12345678901234567890142";
     len = encryptEVP((unsigned char *)password, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf);
     if (len < 0) {
         return false;

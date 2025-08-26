@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 23:27:31 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/26 17:33:25 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 20:31:25 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,11 +38,15 @@ static void free_allocation(Licence_info licence_info) {
 
 static bool create_licence_file(Licence_info *licence_info) {
     char fullpath[512] = {0};
+    size_t len = 0;
 
     sprintf(fullpath, "%s/%s/%s", getenv("IV_HOME"), "data", ".licence");
 
-    save_file(licence_info->hex_code, sizeof(licence_info->hex_code),fullpath, O_CREAT | O_WRONLY | O_TRUNC);
-    save_file((char *)licence_info->sha256_signature, sizeof(licence_info->sha256_signature), fullpath, O_APPEND | O_WRONLY);
+    save_file((char *)licence_info->sha256_signature, SHA256_DIGEST_LENGTH,fullpath, O_CREAT | O_WRONLY | O_TRUNC);
+
+    len = hex2bin((char *)licence_info->hex_code, licence_info->aes_row);
+
+    save_file((char *)licence_info->aes_row, len, fullpath, O_APPEND | O_WRONLY);
 
     return true;
 }
