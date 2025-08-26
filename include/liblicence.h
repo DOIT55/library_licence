@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 11:38:26 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 17:43:51 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,8 +49,8 @@
 #define KEY_MAX_LENGTH 128
 #define LICENCE_LENGTH 512
 #define HOST_NAME_MAX 64
-#define PASSWORD "he11oWor1dLicence!"
 #define SIGNATURE_LENGTH SHA256_DIGEST_LENGTH
+#define UNLIMITED 0
 
 #define FLF __FILE__, __LINE__, __func__
 

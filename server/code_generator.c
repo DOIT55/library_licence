@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/26 13:31:40 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 17:40:59 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,13 +50,13 @@ static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t
     }
 
     snprintf(msg, msg_size,
-             "---------------------------- [Licence Information] -------------------------------------\n"
+             "---------------------------- [Licence Information] -----------------------------\n"
              "User name: %s\n"
              "Equipment host name: %s\n"
              "Request time: %s\n"
              "Expire time: %s\n"
              "Licence code: %s\n"
-             "----------------------------------------------------------------------------------------\n",
+             "--------------------------------------------------------------------------------\n",
              info->request_user_name,
              info->equipment_name,
              request_time_str,
@@ -147,22 +147,15 @@ static bool create_code(Code_generator_info* info) {
         return false;
     }
 
-    len = encryptEVP((unsigned char*)PASSWORD, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf);
+    char *password = "helloworld12345678901234567890142";
+    len = encryptEVP((unsigned char *)password, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf);
     if (len < 0) {
         return false;
     }
 
-    //debug
-    hex_dump(buf, len, "encrypted hex dump");
-    //eof
-
-
     if (bin2hex((unsigned char*)buf, len, info->licence_code) < 0) {
         return false;
     }
-
-    printf("hex dump: %s", buf );
-    printf("\n");
 
     return true;
 }
@@ -209,5 +202,6 @@ int main(int argc, char** argv) {
     }
     save_code_generator_log_file(&licence_info);
     print_code_generator_info(&licence_info);
+
     return EXIT_SUCCESS;
 }

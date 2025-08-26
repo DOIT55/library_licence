@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 23:27:31 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/26 11:31:09 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 17:33:25 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,6 +57,7 @@ int main(int argc, char **argv) {
 
     init_licence_info(&licence_info, argv[1]);
     create_licence_file(&licence_info);
+
     free_allocation(licence_info);
     return 0;
 }

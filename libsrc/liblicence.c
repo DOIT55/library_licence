@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 13:30:49 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 18:33:32 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -332,32 +332,13 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
     EVP_CIPHER_CTX* ctx;
     int len;
     int ciphertext_len;
-    unsigned char iv[17];
+    unsigned char iv[33] = {0};
 
-    if (strlen((char*)key) <= 16) {
-        printError(FLF, "Key length must be greater than 16 characters");
+    if (strlen((char*)key) <= 32) {
+        printError(FLF, "Key length must be greater than 32 characters");
         return -1;
     }
-    strncpy((char*)iv, (char*)key, 16);
-    iv[16] = 0;
-
-    //debug
-    char *message;
-
-    message = "encryption debug\n";
-    write(2, message, strlen(message));
-
-    message = "key:";
-    write(2, message, strlen(message));
-    write(2, (char *)key, strlen((char*)key));
-    write(2, "\n", 1);
-    
-    message = "plain text:";
-    write(2, message, strlen(message));
-    hex_dump(plaintext, plaintext_len, "plaintext hex dump");
-    write(2, plaintext, plaintext_len);
-    write(2, "\n", 1);
-    //debug end
+    strncpy((char*)iv, (char*)key, 32);
 
     /* Create and initialise the context */
     if (!(ctx = EVP_CIPHER_CTX_new())) {
@@ -370,14 +351,6 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
         EVP_CIPHER_CTX_free(ctx);
         return -1;
     }
-
-    //debug
-    message = "iv:";
-    write(2, message, strlen(message));
-    write(2, iv, 17);
-    write(2, "\n", 1);
-
-    //debug eof
 
     /* Provide the message to be encrypted, and obtain the encrypted output.
      * EVP_EncryptUpdate can be called multiple times if necessary
@@ -399,14 +372,6 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
     }
     ciphertext_len += len;
 
-    //debug
-    message = "cipher text\n";
-    write(2, message, strlen(message));
-    hex_dump(ciphertext, ciphertext_len, "ciphertext");
-    write(2, "\n", 1);
-    printf("ciphertext_len: %d\n", ciphertext_len);
-    //debug eof
-
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
     return ciphertext_len;
@@ -426,35 +391,13 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     EVP_CIPHER_CTX* ctx;
     int len;
     int plaintext_len = -1;
-    unsigned char iv[17];
+    unsigned char iv[33]={0};
 
-    //debug
-    char *message;
-    message = "szkey\n";
-    write(2, message, strlen(message));
-    write(2, (char*)szKey, strlen((char*)szKey));
-    write(2, "\n", 1);
-
-
-    message = "cipher text:";
-    write(2, message, strlen(message));
-    hex_dump(ciphertext, ciphertext_len, "ciphertext");
-    write(2, "\n", 1);
-    //debug eof
-
-    if (strlen((char*)szKey) <= 16) {
-        printError(FLF, "Key length must be greater than 16 characters");
+    if (strlen((char*)szKey) <= 32) {
+        printError(FLF, "Key length must be greater than 32 characters");
         return -1;
     }
-    strncpy((char*)iv, (char*)szKey, 16);
-    iv[16] = 0;
-
-    //debug
-    message = "iv:";
-    write(2, message, strlen(message));
-    write(2, iv, 17);
-    write(2, "\n", 1);
-    //debug eof
+    strncpy((char*)iv, (char*)szKey, 32);
 
     if (!(ctx = EVP_CIPHER_CTX_new())) {
         printError(FLF, "Failed to create cipher context");
@@ -478,13 +421,6 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     }
 
     plaintext_len = len;
-
-    //debug
-    message = "plaintext:";
-    write(2, message, strlen(message));
-    write(2, plaintext, plaintext_len);
-    write(2, "\n", 1);
-    //debug eof
 
     /* Finalise the decryption. Further plaintext bytes may be written at
      * this stage.
@@ -649,25 +585,14 @@ time_t licence_check() {
     }
     read(fd, buf, sizeof(buf) - 1);
     
-    hex_dump(buf, 200, "Licence File");//debug
-
     len = strlen(buf);
 
     memcpy(sha256, buf + len + 1, SHA256_DIGEST_LENGTH);
-
-    //debug code
-    hex_dump(sha256, SHA256_DIGEST_LENGTH, "SHA256");
-
-    //debug EOF
 
     if (!init_licence_info(&licence_info, buf)) {
         printError(FLF, "Failed to initialize licence info");
         exit(EXIT_FAILURE);
     }
-    //debug code
-    hex_dump(licence_info.sha256_signature, SHA256_DIGEST_LENGTH, "licence info sha256");
-    hex_dump(sha256, SHA256_DIGEST_LENGTH, "SHA256");
-    //debug EOF
 
     if (memcmp(licence_info.sha256_signature, sha256, SHA256_DIGEST_LENGTH)) {
         printError(FLF, "Invalid licence");
@@ -686,21 +611,13 @@ time_t licence_check() {
     licence_info.host_name = NULL;
     licence_info.uuid = NULL;
 
-    //TODO :delete
-    Crypt_info info_debug = {0};
-    unsigned char *tmp = (unsigned char *)buf;
-    memset(buf, 0, sizeof(buf));
-    len = 0;
+    len = hex2bin((char *)licence_info.hex_code, (unsigned char *)buf);
 
-    len = hex2bin((char *)licence_info.hex_code, tmp);
-    decryptEVP((unsigned char *)PASSWORD, tmp, len, (unsigned char*)&info_debug);
-
-    printf("debug expire :%ld\n", info_debug.expire_time);
-    printf("debug publish :%ld\n", info_debug.request_time);
-
-    hex_dump(tmp, len, "Decrypted Licence");//debug
-    exit(1);
-    //TODO :debug
+    char *password = "helloworld12345678901234567890142";
+    if (decryptEVP((unsigned char *)password, (unsigned char*)buf, len, (unsigned char*)&crypt_info) < 0) {
+        printError(FLF, "Failed to decrypt licence");
+        exit(1);
+    }
 
     return crypt_info.expire_time;
 }
@@ -710,7 +627,7 @@ time_t licence_check() {
  * @param argc: argument count
  * @param argv: argument vector
  * @param envp: environment pointer
- * @param check_time: time interval for licence check (while loop)
+ * @param check_time: time interval to check licence (seconds), if unlimited or less than 0, run indefinitely
  */
 void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char **argv, char **envp, int check_time) {
     time_t now = 0;
@@ -720,15 +637,16 @@ void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char
     now = time(NULL);
     licence_check_time = now + check_time;
     expire_date = licence_check();
+
+    printf(COLOR_GREEN"expire date :%s\n"COLOR_GREEN, expire_date ? ctime(&expire_date) : "N/A");
     if (expire_date < 0) {
         printError(FLF, "Invalid licence");
         exit(EXIT_FAILURE);
-    } else if (check_time < 1) {
+    } else if (check_time <= UNLIMITED || expire_date == UNLIMITED) {
         while (true) {
             run_main_func(argc, argv, envp);
         }
     }
-
     while (now < expire_date) {
         run_main_func(argc, argv, envp);
         if (difftime(now, licence_check_time) >= 0) {
