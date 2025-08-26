@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 20:40:25 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 20:42:09 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -587,28 +587,16 @@ time_t licence_check() {
     }
     len = read(fd, buf, sizeof(buf) - 1);
 
-    //debug
-    printf("read_len : %d\n", len);
-    hex_dump(buf,128, "get file");
-    //debug eof
-
     memcpy(sha256, buf, SHA256_DIGEST_LENGTH);
     memcpy(licence_info.aes_row, buf + SHA256_DIGEST_LENGTH, len - SHA256_DIGEST_LENGTH);
 
     memset(buf, 0, sizeof(buf));
     bin2hex(licence_info.aes_row, len - SHA256_DIGEST_LENGTH, (unsigned char*)buf);
 
-    printf("hex code : %s\n", buf); //debug
-
     if (!init_licence_info(&licence_info, buf)) {
         printError(FLF, "Failed to initialize licence info");
         exit(EXIT_FAILURE);
     }
-
-    //debug
-    hex_dump((char *)licence_info.sha256_signature, SHA256_DIGEST_LENGTH, "licence_info.sha256");
-    hex_dump(sha256, SHA256_DIGEST_LENGTH, "file sha256");
-    //debug eof
 
     if (memcmp(licence_info.sha256_signature, sha256, SHA256_DIGEST_LENGTH)) {
         printError(FLF, "Invalid licence");
