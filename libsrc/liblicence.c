@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 11:46:47 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/26 13:30:49 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -341,6 +341,24 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
     strncpy((char*)iv, (char*)key, 16);
     iv[16] = 0;
 
+    //debug
+    char *message;
+
+    message = "encryption debug\n";
+    write(2, message, strlen(message));
+
+    message = "key:";
+    write(2, message, strlen(message));
+    write(2, (char *)key, strlen((char*)key));
+    write(2, "\n", 1);
+    
+    message = "plain text:";
+    write(2, message, strlen(message));
+    hex_dump(plaintext, plaintext_len, "plaintext hex dump");
+    write(2, plaintext, plaintext_len);
+    write(2, "\n", 1);
+    //debug end
+
     /* Create and initialise the context */
     if (!(ctx = EVP_CIPHER_CTX_new())) {
         printError(FLF, "Failed to create cipher context");
@@ -352,6 +370,14 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
         EVP_CIPHER_CTX_free(ctx);
         return -1;
     }
+
+    //debug
+    message = "iv:";
+    write(2, message, strlen(message));
+    write(2, iv, 17);
+    write(2, "\n", 1);
+
+    //debug eof
 
     /* Provide the message to be encrypted, and obtain the encrypted output.
      * EVP_EncryptUpdate can be called multiple times if necessary
@@ -372,6 +398,14 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
         return -1;
     }
     ciphertext_len += len;
+
+    //debug
+    message = "cipher text\n";
+    write(2, message, strlen(message));
+    hex_dump(ciphertext, ciphertext_len, "ciphertext");
+    write(2, "\n", 1);
+    printf("ciphertext_len: %d\n", ciphertext_len);
+    //debug eof
 
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
@@ -394,12 +428,33 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     int plaintext_len = -1;
     unsigned char iv[17];
 
+    //debug
+    char *message;
+    message = "szkey\n";
+    write(2, message, strlen(message));
+    write(2, (char*)szKey, strlen((char*)szKey));
+    write(2, "\n", 1);
+
+
+    message = "cipher text:";
+    write(2, message, strlen(message));
+    hex_dump(ciphertext, ciphertext_len, "ciphertext");
+    write(2, "\n", 1);
+    //debug eof
+
     if (strlen((char*)szKey) <= 16) {
         printError(FLF, "Key length must be greater than 16 characters");
         return -1;
     }
     strncpy((char*)iv, (char*)szKey, 16);
     iv[16] = 0;
+
+    //debug
+    message = "iv:";
+    write(2, message, strlen(message));
+    write(2, iv, 17);
+    write(2, "\n", 1);
+    //debug eof
 
     if (!(ctx = EVP_CIPHER_CTX_new())) {
         printError(FLF, "Failed to create cipher context");
@@ -415,12 +470,21 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     /* Provide the message to be decrypted, and obtain the plaintext output.
      * EVP_DecryptUpdate can be called multiple times if necessary
      */
+
     if (1 != EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len)) {
         printError(FLF, "Failed to decrypt data");
         EVP_CIPHER_CTX_free(ctx);
         return -1;
     }
+
     plaintext_len = len;
+
+    //debug
+    message = "plaintext:";
+    write(2, message, strlen(message));
+    write(2, plaintext, plaintext_len);
+    write(2, "\n", 1);
+    //debug eof
 
     /* Finalise the decryption. Further plaintext bytes may be written at
      * this stage.
