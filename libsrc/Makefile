@@ -1,13 +1,12 @@
 AR = ar
 AR_FLAGS = rcs
 NAME = test_main
-LIB_NAME = liblicence.a
+LIB_NAME = liblicense.a
 CC = cc
 CFLAGS = -Wall -Wextra -Werror #-g3 -fsanitize=address
 INCLUDE = -I../include
-LDFLAGS = -llicence -lssl -lcrypto 
 
-LIB_SRCS = liblicence.c
+LIB_SRCS = liblicense.c
 LIB_OBJS = $(LIB_SRCS:.c=.o)
 
 TEST_SRCS = test_main.c

@@ -2,7 +2,7 @@
     "files.associations": {
         "*.sc": "c",
         "*.p": "c",
-        "liblicence.h": "c",
+        "liblicense.h": "c",
         "cstdlib": "c",
         "ioctl.h": "c",
         "ioctls.h": "c",

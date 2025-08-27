@@ -6,14 +6,14 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/27 09:35:59 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/27 11:46:52 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
-#ifndef LIBLICENCE_H
-#define LIBLICENCE_H
+#ifndef LIBLICENSE_H
+#define LIBLICENSE_H
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -47,7 +47,7 @@
 #define INTERFACE_MAX_LENGTH 64
 #define PLAINTEXT_LENGTH 1024
 #define KEY_MAX_LENGTH 128
-#define LICENCE_LENGTH 512
+#define LICENSE_LENGTH 512
 #define HOST_NAME_MAX 64
 #define SIGNATURE_LENGTH SHA256_DIGEST_LENGTH
 #define UNLIMITED 0
@@ -111,8 +111,9 @@ size_t hex2bin(const char *hex, unsigned char *out);
 int bin2hex(const unsigned char *bin, size_t len, unsigned char *out);
 void save_file(const char* msg, int msg_len, const char* fullpath, int option);
 char *new_host_name();
-bool init_licence_info(Licence_info *licence_info, char *licence_code);
+bool init_license_info(Licence_info *license_info, char *license_code);
 void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char **argv, char **envp, int check_time);
 void hex_dump(const void* data, size_t size, const char* label);
+time_t license_check();
 
 #endif

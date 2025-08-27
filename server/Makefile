@@ -2,7 +2,7 @@ NAME = code_generator
 CC = cc
 CFLAGS = -Wall -Wextra -Werror #-g3 -fsanitize=address # sha256 is not supported in -Werror
 INCLUDE = -I../include
-LDFLAGS = -llicence -lssl -lcrypto 
+LDFLAGS = -llicense -lssl -lcrypto 
 LIBRARY = -L../lib 
 SRCS = code_generator.c
 OBJS = $(SRCS:.c=.o)

@@ -6,25 +6,36 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/26 20:00:19 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/27 14:02:53 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "code_generator.h"
 
-#include "liblicence.h"
+#include "liblicense.h"
 
 static void usage(const char** argv) {
     char usage_message[1024] = {0};
     int pos = 0;
 
-    pos += sprintf(usage_message, "%s [corp_email_id] [sysconfig_host_name][option]\n", argv[0]);
-    pos += sprintf(usage_message + pos, "example\t: %s jy.h4456 emgcA -y 2 -m 6 -d 3\n", argv[0]);
-    pos += sprintf(usage_message + pos, "\nOption\n"
-                                        "\t-y : expire year\n"
-                                        "\t-m : expire month\n"
-                                        "\t-d : expire day\n");
-    printf(COLOR_RED"Usage\t: %s"COLOR_RESET, usage_message);
+    pos += sprintf(usage_message, COLOR_BOLD"\nUSAGE : %s [corp_email_id] [sysconfig_host_name][option]\n", argv[0]);
+    pos += sprintf(usage_message + pos, "example\t: %s jy.h4456 emgcA -y 2 -m 6 -d 3\n\n"COLOR_RESET, argv[0]);
+    pos += sprintf(usage_message + pos,
+                   "DESCRIPTION:"
+                   "    Generates a license code based on the provided corporate email and system configuration.\n\n"
+                   COLOR_GREEN"EXAMPLES:\n"
+                   "    ./server/code_generator jy.h4456 emgcA\n"
+                   "        → Generates a license with unlimited expiration.\n\n"
+                   "    ./server/code_generator jy.h4456 emgcA -y 2 -m 6 -d 3\n"
+                   "        → Generates a license that expires in 2 years, 6 months, and 3 days.\n\n"COLOR_RESET
+                   "OPTIONS:\n"
+                   "    -y <year>     Set expiration period in years.\n"
+                   "    -m <month>    Set expiration period in months.\n"
+                   "    -d <day>      Set expiration period in days.\n\n"
+                   "NOTES:\n"
+                   "    - If no options are provided, the license will have no expiration (unlimited).\n"
+                   "    - You can combine -y, -m, and -d to specify a custom expiration duration.\n");
+    printf( "%s" COLOR_RESET, usage_message);
 }
 
 static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t msg_size) {
@@ -61,7 +72,7 @@ static bool gen_generator_msg(const Code_generator_info* info, char* msg, size_t
              info->equipment_name,
              request_time_str,
              expire_time_str,
-             info->licence_code);
+             info->license_code);
     return true;
 }
 
@@ -134,14 +145,13 @@ static bool set_code_generator_info(Code_generator_info* info, int argc, char** 
         info->crypt_info.expire_time = 0;
     }
 
-
     return true;
 }
 
 static bool create_code(Code_generator_info* info) {
     char buf[1024] = {0};
     int len = 0;
-    char *password = NULL;
+    char* password = NULL;
 
     if (info == NULL) {
         printError(FLF, "Invalid Code_generator_info pointer");
@@ -149,12 +159,12 @@ static bool create_code(Code_generator_info* info) {
     }
 
     password = "helloworld12345678901234567890142";
-    len = encryptEVP((unsigned char *)password, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf);
+    len = encryptEVP((unsigned char*)password, (unsigned char*)&(info->crypt_info), sizeof(info->crypt_info), (unsigned char*)buf);
     if (len < 0) {
         return false;
     }
 
-    if (bin2hex((unsigned char*)buf, len, info->licence_code) < 0) {
+    if (bin2hex((unsigned char*)buf, len, info->license_code) < 0) {
         return false;
     }
 
@@ -185,24 +195,25 @@ static void save_code_generator_log_file(const Code_generator_info* info) {
 }
 
 int main(int argc, char** argv) {
-    Code_generator_info licence_info;
+    Code_generator_info license_info;
 
-    if ((2 < argc && argc <  10) == false) {
+    printf("%s\n", OPENSSL_VERSION_TEXT);
+    if ((2 < argc && argc < 10) == false) {
         usage((const char**)argv);
         return EXIT_FAILURE;
     }
 
-    if (!set_code_generator_info(&licence_info, argc, argv)) {
+    if (!set_code_generator_info(&license_info, argc, argv)) {
         printError(FLF, "Failed to set generator info");
         return EXIT_FAILURE;
     }
 
-    if (!create_code(&licence_info)) {
-        printError(FLF, "Failed to create licence");
+    if (!create_code(&license_info)) {
+        printError(FLF, "Failed to create license");
         return EXIT_FAILURE;
     }
-    save_code_generator_log_file(&licence_info);
-    print_code_generator_info(&licence_info);
+    save_code_generator_log_file(&license_info);
+    print_code_generator_info(&license_info);
 
     return EXIT_SUCCESS;
 }

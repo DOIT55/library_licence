@@ -1,16 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   liblicence.c                                       :+:      :+:    :+:   */
+/*   liblicense.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/27 09:38:52 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/27 13:04:49 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "liblicence.h"
+#include "liblicense.h"
 
 void printError(const char* file, const int line, const char* function_name, const char* msg) {
     if (file == NULL || line == 0 || function_name == NULL) {
@@ -172,8 +172,6 @@ char* new_uuid() {
         size_t remaining = 0;
         size_t data_len = 0;
 
-        printf("%s\n", OPENSSL_VERSION_TEXT);
-
         if (!signature_data || !out) {
             printError(FLF, "Invalid signature_data pointer");
             return false;
@@ -231,7 +229,6 @@ char* new_uuid() {
             return false;
         }
 
-        printf("%s\n", OPENSSL_VERSION_TEXT);
         size_t data_len = strlen((const char*)signature_data);
         if (data_len >= sizeof(buf)) {
             printError(FLF, "Signature data too long");
@@ -488,25 +485,25 @@ char* new_host_name() {
     return strdup(host_name);
 }
 
-bool init_licence_info(Licence_info* licence_info, char* licence_code) {
-    if (licence_info == NULL || licence_code == NULL) {
+bool init_license_info(Licence_info* license_info, char* license_code) {
+    if (license_info == NULL || license_code == NULL) {
         printError(FLF, "Invalid Licence_info pointer");
         return false;
     }
 
-    memset(licence_info, 0, sizeof(Licence_info));
+    memset(license_info, 0, sizeof(Licence_info));
 
-    licence_info->mac_list = new_mac_list();
-    licence_info->uuid = new_uuid();
-    licence_info->host_name = new_host_name();
-    memcpy(licence_info->hex_code, licence_code, strlen(licence_code));
+    license_info->mac_list = new_mac_list();
+    license_info->uuid = new_uuid();
+    license_info->host_name = new_host_name();
+    memcpy(license_info->hex_code, license_code, strlen(license_code));
 
-    sprintf(licence_info->signature_row, "%s%s%s%s",
-         licence_info->host_name, licence_info->mac_list[0], licence_info->hex_code, licence_info->uuid);
+    sprintf(license_info->signature_row, "%s%s%s%s",
+         license_info->host_name, license_info->mac_list[0], license_info->hex_code, license_info->uuid);
 
-    create_sha256_signature((const void*)licence_info->signature_row, NULL, licence_info->sha256_signature);
+    create_sha256_signature((const void*)license_info->signature_row, NULL, license_info->sha256_signature);
 
-    // printf("row data : %s", licence_info->signature_row);
+    // printf("row data : %s", license_info->signature_row);
 
     return true;
 }
@@ -566,9 +563,16 @@ void hex_dump(const void* data, size_t size, const char* label) {
     printf("\n");
 }
 
-
-time_t licence_check() {
-    Licence_info licence_info = {0};
+/**
+ * @brief Checks the license expiration date.
+ *
+ * If the expiration date is invalid or has passed, prints an error message and terminates the process.
+ *
+ * @return time_t license expire date. || 
+ * 0 : unlimited expire date.
+ */
+time_t license_check() {
+    Licence_info license_info = {0};
     Crypt_info crypt_info = {0};
     char fullpath[64] = {0};
     int fd = 0;
@@ -578,49 +582,49 @@ time_t licence_check() {
     int len = 0;
     char *password = NULL;
 
-    sprintf(fullpath, "%s/%s/%s", getenv("IV_HOME"), "data", ".licence");
+    sprintf(fullpath, "%s/%s/%s", getenv("IV_HOME"), "data", ".license");
 
     fd = open(fullpath, O_RDONLY);
     if (fd < 0) {
-        printError(FLF, "Failed to open licence file");
+        printError(FLF, "Failed to open license file");
         exit(EXIT_FAILURE);
     }
     len = read(fd, buf, sizeof(buf) - 1);
 
     memcpy(sha256, buf, SHA256_DIGEST_LENGTH);
-    memcpy(licence_info.aes_row, buf + SHA256_DIGEST_LENGTH, len - SHA256_DIGEST_LENGTH);
+    memcpy(license_info.aes_row, buf + SHA256_DIGEST_LENGTH, len - SHA256_DIGEST_LENGTH);
 
     memset(buf, 0, sizeof(buf));
-    bin2hex(licence_info.aes_row, len - SHA256_DIGEST_LENGTH, (unsigned char*)buf);
+    bin2hex(license_info.aes_row, len - SHA256_DIGEST_LENGTH, (unsigned char*)buf);
 
-    if (!init_licence_info(&licence_info, buf)) {
-        printError(FLF, "Failed to initialize licence info");
+    if (!init_license_info(&license_info, buf)) {
+        printError(FLF, "Failed to initialize license info");
         exit(EXIT_FAILURE);
     }
 
-    if (memcmp(licence_info.sha256_signature, sha256, SHA256_DIGEST_LENGTH)) {
-        printError(FLF, "Invalid licence");
+    if (memcmp(license_info.sha256_signature, sha256, SHA256_DIGEST_LENGTH)) {
+        printError(FLF, "Invalid license");
         exit(EXIT_FAILURE);
     }
 
-    free_ptr = licence_info.mac_list;
+    free_ptr = license_info.mac_list;
     while (*free_ptr) {
         free(*free_ptr);
         free_ptr++;
     }
-    free(licence_info.mac_list);
-    free(licence_info.host_name);
-    free(licence_info.uuid);
-    licence_info.mac_list = NULL;
-    licence_info.host_name = NULL;
-    licence_info.uuid = NULL;
+    free(license_info.mac_list);
+    free(license_info.host_name);
+    free(license_info.uuid);
+    license_info.mac_list = NULL;
+    license_info.host_name = NULL;
+    license_info.uuid = NULL;
 
-    len = hex2bin((char *)licence_info.hex_code, (unsigned char *)buf);
+    len = hex2bin((char *)license_info.hex_code, (unsigned char *)buf);
 
 
     password = "helloworld12345678901234567890142";
     if (decryptEVP((unsigned char *)password, (unsigned char*)buf, len, (unsigned char*)&crypt_info) < 0) {
-        printError(FLF, "Failed to decrypt licence");
+        printError(FLF, "Failed to decrypt license");
         exit(1);
     }
 
@@ -632,20 +636,20 @@ time_t licence_check() {
  * @param argc: argument count
  * @param argv: argument vector
  * @param envp: environment pointer
- * @param check_time: time interval to check licence (seconds), if unlimited or less than 0, run indefinitely
+ * @param check_time: time interval to check license (seconds), if unlimited or less than 0, run indefinitely
  */
 void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char **argv, char **envp, int check_time) {
     time_t now = 0;
-    time_t licence_check_time = 0;
+    time_t license_check_time = 0;
     time_t expire_date = 0;
 
     now = time(NULL);
-    licence_check_time = now + check_time;
-    expire_date = licence_check();
+    license_check_time = now + check_time;
+    expire_date = license_check();
 
     printf(COLOR_GREEN"expire date :%s\n"COLOR_RESET, expire_date ? ctime(&expire_date) : "N/A");
     if (expire_date < 0) {
-        printError(FLF, "Invalid licence");
+        printError(FLF, "Invalid license");
         exit(EXIT_FAILURE);
     } else if (check_time <= UNLIMITED || expire_date == UNLIMITED) {
         while (true) {
@@ -654,9 +658,9 @@ void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char
     }
     while (now < expire_date) {
         run_main_func(argc, argv, envp);
-        if (difftime(now, licence_check_time) >= 0) {
-            licence_check();
-            licence_check_time += check_time;
+        if (difftime(now, license_check_time) >= 0) {
+            license_check();
+            license_check_time += check_time;
         }
         now = time(NULL);
     }

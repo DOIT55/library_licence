@@ -45,7 +45,7 @@ a.out
 sysconfig
 *.log
 code_generator
-licence_creator
-.licence
-.licence_generator
+license_creator
+.license
+.license_generator
 test_main
