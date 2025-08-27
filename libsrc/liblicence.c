@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 20:42:09 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/27 09:38:52 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -643,7 +643,7 @@ void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char
     licence_check_time = now + check_time;
     expire_date = licence_check();
 
-    printf(COLOR_GREEN"expire date :%s\n"COLOR_GREEN, expire_date ? ctime(&expire_date) : "N/A");
+    printf(COLOR_GREEN"expire date :%s\n"COLOR_RESET, expire_date ? ctime(&expire_date) : "N/A");
     if (expire_date < 0) {
         printError(FLF, "Invalid licence");
         exit(EXIT_FAILURE);

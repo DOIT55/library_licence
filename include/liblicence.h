@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/26 19:01:20 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/27 09:35:59 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,11 +56,35 @@
 
 #define MAC_DIR "/sys/class/net/"
 #define UUID_FILE_PATH "/sys/class/dmi/id/product_uuid"
-#if OPENSSL_VERSION_NUMBER < 30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-    #define USE_NEW_SHA256 0
-#else
+
+#if defined(OPENSSL_VERSION_NUMBER)
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+        #define USE_NEW_SHA256 1
+        #define OPENSSL_API_VERSION "3.x (New EVP API)"
+    #else
+        #define USE_NEW_SHA256 0
+        #define OPENSSL_API_VERSION "2.x (Legacy SHA256 API)"
+    #endif
+#elif defined(LIBRESSL_VERSION_NUMBER)
     #define USE_NEW_SHA256 1
+    #define OPENSSL_API_VERSION "LibreSSL (EVP API)"
+#else
+    #define USE_NEW_SHA256 0
+    #define OPENSSL_API_VERSION "Unknown (Legacy API)"
+    #warning "OpenSSL version not detected, using legacy API"
 #endif
+
+#ifdef DEBUG
+    #define DEBUG_OPENSSL_VERSION() \
+        printf("OpenSSL Version: 0x%08lxL (%s)\n", \
+               (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_API_VERSION); \
+        printf("USE_NEW_SHA256: %d\n", USE_NEW_SHA256);
+#else
+    #define DEBUG_OPENSSL_VERSION()
+#endif
+
+// ...existing code...
+
 typedef struct {
     char **mac_list;
     char *host_name;
