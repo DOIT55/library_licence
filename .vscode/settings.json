@@ -10,6 +10,16 @@
         "ttydefaults.h": "c",
         "features.h": "c",
         "fs.h": "c",
-        "code_generator.h": "c"
+        "code_generator.h": "c",
+        "dirent.h": "c",
+        "unistd.h": "c",
+        "stdbool.h": "c",
+        "bit": "c",
+        "cmath": "c",
+        "compare": "c",
+        "concepts": "c",
+        "type_traits": "c",
+        "limits": "c",
+        "typeinfo": "c"
     }
 }

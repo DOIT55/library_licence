@@ -3,16 +3,18 @@
 /*                                                        :::      ::::::::   */
 /*   liblicense.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
+/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/27 13:04:49 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/28 23:32:41 by HaJuYoung (juha) ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "liblicense.h"
 
-void printError(const char* file, const int line, const char* function_name, const char* msg) {
+static License_generator_info info;
+
+static void printError(const char* file, const int line, const char* function_name, const char* msg) {
     if (file == NULL || line == 0 || function_name == NULL) {
         printError(FLF, "Invalid error parameters");
         return;
@@ -26,122 +28,49 @@ void printError(const char* file, const int line, const char* function_name, con
     fprintf(stderr, COLOR_RESET);
 }
 
-/**
- * @brief you must free the returned string
- * @return string interface that separate space, if failed NULL
- */
-static char* get_interface_names_space_separated() {
-    char buf[1024] = {0};
+static char* set_mac() {
+    char mac_path[512] = {0};
+    int fd = 0;
     DIR* dp = NULL;
     struct dirent* entry = NULL;
+
     dp = opendir(MAC_DIR);
     if (dp == NULL) {
         printError(FLF, "Failed to open MAC directory");
         return NULL;
     }
 
-    while ((entry = readdir(dp)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        strcat(buf, entry->d_name);
-        strcat(buf, " ");
+    readdir(dp);  // .
+    readdir(dp);  // ..
+    entry = readdir(dp);
+
+    if (entry == NULL) {
+        printError(FLF, "No MAC address found");
+        return NULL;
     }
+
+    sprintf(mac_path, "%s/%s/address", MAC_DIR, entry->d_name);
     closedir(dp);
 
-    return strdup(buf);
-}
-
-static int get_word_count_space_seperated(const char* str) {
-    int count = 0;
-    int i = 0;
-
-    if (str == NULL) {
-        return count;
-    }
-
-    while (str[i]) {
-        if (str[i] == ' ') {
-            count++;
-        }
-        i++;
-    }
-    return count;
-}
-
-static char** create_mac_list(char* interface_names, int interface_count) {
-    char* savetok = NULL;
-    char* token = NULL;
-    char** mac_list = NULL;
-    char mac_path[128] = {0};
-    char buf[20] = {0};
-    int fd = 0;
-    int i = 0;
-
-    mac_list = malloc(sizeof(char*) * (interface_count + 1));
-    if (mac_list == NULL) {
-        printError(FLF, "Failed to allocate memory for MAC list");
+    fd = open(mac_path, O_RDONLY);
+    if (fd < 0) {
+        printError(FLF, "Failed to open MAC file");
         return NULL;
     }
-    memset(mac_list, 0, sizeof(char*) * (interface_count + 1));
 
-    token = strtok_r(interface_names, " ", &savetok);
-    while (token != NULL) {
-        bzero(mac_path, sizeof(mac_path));
-        sprintf(mac_path, "%s%s/address", MAC_DIR, token);
-
-        fd = open(mac_path, O_RDONLY);
-        if (fd < 0) {
-            token = strtok_r(NULL, " ", &savetok);
-            continue;
-        }
-
-        read(fd, buf, sizeof(buf) - 1);
+    if (read(fd, info.mac, sizeof(info.mac) - 1) == -1) {
+        printError(FLF, "Failed to read MAC file");
         close(fd);
-
-        mac_list[i] = strdup(buf);
-        if (mac_list[i] == NULL) {
-            printError(FLF, "Failed to duplicate string");
-            free(mac_list);
-            return NULL;
-        }
-
-        mac_list[i][17] = '\0';
-
-        i++;
-        token = strtok_r(NULL, " ", &savetok);
-    }
-
-    if (i == 0) {
-        free(mac_list);
         return NULL;
     }
 
-    return mac_list;
+    close(fd);
+
+    return info.mac;
 }
 
-char** new_mac_list() {
-    char* interface_names;
-    char** mac_list = NULL;
-    int interface_count = 0;
-
-    interface_names = get_interface_names_space_separated();
-    if (interface_names == NULL) {
-        return mac_list;
-    }
-
-    interface_count = get_word_count_space_seperated(interface_names);
-
-    mac_list = create_mac_list(interface_names, interface_count);
-
-    free(interface_names);
-    return mac_list;
-}
-
-char* new_uuid() {
-    char* uuid = NULL;
+static char* set_uuid() {
     int fd = 0;
-    char buf[37] = {0};
 
     if (access(UUID_FILE_PATH, R_OK) != 0) {
         return NULL;
@@ -153,227 +82,93 @@ char* new_uuid() {
         return NULL;
     }
 
-    read(fd, buf, sizeof(buf) - 1);
-    close(fd);
-
-    uuid = strdup(buf);
-    if (uuid == NULL) {
-        printError(FLF, "Failed to duplicate string");
+    if (read(fd, info.uuid, sizeof(info.uuid) - 1) == -1) {
+        printError(FLF, "Failed to read UUID file");
+        close(fd);
         return NULL;
     }
+    close(fd);
 
-    return uuid;
+    return info.uuid;
 }
 
 #if USE_NEW_SHA256
-    bool create_sha256_signature(const void* signature_data, const char* add_str, unsigned char* out) {
-        EVP_MD_CTX* ctx = NULL;
-        char buf[1024] = {0};
-        size_t remaining = 0;
-        size_t data_len = 0;
 
-        if (!signature_data || !out) {
-            printError(FLF, "Invalid signature_data pointer");
-            return false;
-        }
+static Licence_bool set_sha256_signature() {
+    EVP_MD_CTX* ctx = NULL;
+    unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
+    size_t data_len = 0;
 
-        data_len = strlen((const char*)signature_data);
-        if (data_len >= sizeof(buf)) {
-            printError(FLF, "Signature data too long");
-            return false;
-        }
-
-        memcpy(buf, signature_data, data_len);
-
-        if (add_str) {
-            remaining = sizeof(buf) - data_len - 1;
-            strncat((char*)buf, add_str, remaining);
-        }
-
-        ctx = EVP_MD_CTX_new();
-        if (!ctx) {
-            printError(FLF, "Failed to create EVP_MD_CTX");
-            return false;
-        }
-
-        if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1) {
-            printError(FLF, "Failed to initialize EVP_Digest");
-            goto error;
-        }
-
-        if (EVP_DigestUpdate(ctx, buf, strlen(buf)) != 1) {
-            printError(FLF, "Failed to update EVP_Digest");
-            goto error;
-        }
-
-        if (EVP_DigestFinal_ex(ctx, out, NULL) != 1) {
-            printError(FLF, "Failed to finalize EVP_Digest");
-            goto error;
-        }
-
-        EVP_MD_CTX_free(ctx);
-        return true;
-
-    error:
-        EVP_MD_CTX_free(ctx);
-        return false;
+    if (info.mac[0] == '\0' || info.aes_bin[0] == '\0') {
+        printError(FLF, "Missing required fields");
+        return license_false;
     }
+
+    memcpy(buf, info.mac, MAX_MAC_LEN);
+    memcpy(buf + MAX_MAC_LEN, info.aes_bin, MAX_AES_BIN_LEN);
+    memcpy(buf + MAX_MAC_LEN + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
+
+    ctx = EVP_MD_CTX_new();
+    if (!ctx) {
+        printError(FLF, "Failed to create EVP_MD_CTX");
+        return license_false;
+    }
+
+    if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1) {
+        printError(FLF, "Failed to initialize EVP_Digest");
+        goto error;
+    }
+
+    data_len = sizeof(buf);
+    if (EVP_DigestUpdate(ctx, buf, data_len) != 1) {
+        printError(FLF, "Failed to update EVP_Digest");
+        goto error;
+    }
+
+    if (EVP_DigestFinal_ex(ctx, info.sha256, NULL) != 1) {
+        printError(FLF, "Failed to finalize EVP_Digest");
+        goto error;
+    }
+
+    EVP_MD_CTX_free(ctx);
+    return license_true;
+
+error:
+    EVP_MD_CTX_free(ctx);
+    return license_false;
+}
 #else
-    bool create_sha256_signature(const void* signature_data, const char* add_str, unsigned char* out) {
-        SHA256_CTX sha256;
-        char buf[1024] = {0};
-        size_t remaining = 0;
 
-        if (!signature_data || !out) {
-            printError(FLF, "Invalid signature_data pointer");
-            return false;
-        }
+static Licence_bool set_sha256_signature() {
+    SHA256_CTX sha256;
+    unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
+    size_t data_len = 0;
 
-        size_t data_len = strlen((const char*)signature_data);
-        if (data_len >= sizeof(buf)) {
-            printError(FLF, "Signature data too long");
-            return false;
-        }
-
-        memcpy(buf, signature_data, data_len);
-
-        if (add_str) {
-            remaining = sizeof(buf) - data_len - 1;
-            strncat((char*)buf, add_str, remaining);
-        }
-
-        if (SHA256_Init(&sha256) == false) {
-            printError(FLF, "Failed to initialize SHA256");
-            return false;
-        }
-        if (SHA256_Update(&sha256, buf, strlen(buf)) == false) {
-            printError(FLF, "Failed to update SHA256");
-            return false;
-        }
-        if (SHA256_Final(out, &sha256) == false) {
-            printError(FLF, "Failed to finalize SHA256");
-            return false;
-        }
-        return true;
+    if (info.mac == NULL || info.aes_bin == NULL) {
+        printError(FLF, "Missing required fields");
+        return license_false;
     }
+
+    memcpy(buf, info.mac, MAX_MAC_LEN);
+    memcpy(buf + data_len, info.aes_bin, MAX_AES_BIN_LEN);
+    memcpy(buf + data_len + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
+
+    if (SHA256_Init(&sha256) == license_false) {
+        printError(FLF, "Failed to initialize SHA256");
+        return license_false;
+    }
+    data_len = sizeof(buf);
+    if (SHA256_Update(&sha256, buf, data_len) == license_false) {
+        printError(FLF, "Failed to update SHA256");
+        return license_false;
+    }
+    if (SHA256_Final(info.sha256, &sha256) == license_false) {
+        printError(FLF, "Failed to finalize SHA256");
+        return license_false;
+    }
+    return license_true;
+}
 #endif
-
-
-
-int bin2hex(const unsigned char* bin, size_t len, unsigned char* out) {
-    size_t i;
-
-    if (bin == NULL || len == 0)
-        return -1;
-
-    for (i = 0; i < len; i++) {
-        out[i * 2] = "0123456789ABCDEF"[bin[i] >> 4];
-        out[i * 2 + 1] = "0123456789ABCDEF"[bin[i] & 0x0F];
-    }
-    out[len * 2] = '\0';
-
-    return 0;
-}
-
-int hexchr2bin(const char hex, char* out) {
-    if (out == NULL)
-        return 0;
-
-    if (hex >= '0' && hex <= '9') {
-        *out = hex - '0';
-    } else if (hex >= 'A' && hex <= 'F') {
-        *out = hex - 'A' + 10;
-    } else if (hex >= 'a' && hex <= 'f') {
-        *out = hex - 'a' + 10;
-    } else {
-        return 0;
-    }
-
-    return 1;
-}
-
-size_t hex2bin(const char* hex, unsigned char* out) {
-    size_t len;
-    char b1;
-    char b2;
-    size_t i;
-
-    if (hex == NULL || *hex == '\0' || out == NULL)
-        return 0;
-
-    len = strlen(hex);
-    if (len % 2 != 0)
-        return 0;
-    len /= 2;
-
-    memset(out, 'A', len);
-    for (i = 0; i < len; i++) {
-        if (!hexchr2bin(hex[i * 2], &b1) || !hexchr2bin(hex[i * 2 + 1], &b2)) {
-            return 0;
-        }
-        (out)[i] = (b1 << 4) | b2;
-    }
-    return len;
-}
-
-/**
- *
- *
- * @param key
- * @param plaintext
- * @param plaintext_len
- * @param ciphertext
- *
- * @return
- */
-int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, unsigned char* ciphertext) {
-    EVP_CIPHER_CTX* ctx;
-    int len;
-    int ciphertext_len;
-    unsigned char iv[33] = {0};
-
-    if (strlen((char*)key) <= 32) {
-        printError(FLF, "Key length must be greater than 32 characters");
-        return -1;
-    }
-    strncpy((char*)iv, (char*)key, 32);
-
-    /* Create and initialise the context */
-    if (!(ctx = EVP_CIPHER_CTX_new())) {
-        printError(FLF, "Failed to create cipher context");
-        return -1;
-    }
-
-    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
-        printError(FLF, "Failed to initialize encryption");
-        EVP_CIPHER_CTX_free(ctx);
-        return -1;
-    }
-
-    /* Provide the message to be encrypted, and obtain the encrypted output.
-     * EVP_EncryptUpdate can be called multiple times if necessary
-     */
-    if (1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len)) {
-        printError(FLF, "Failed to encrypt data");
-        EVP_CIPHER_CTX_free(ctx);
-        return -1;
-    }
-    ciphertext_len = len;
-
-    /* Finalise the encryption. Further ciphertext bytes may be written at
-     * this stage.
-     */
-    if (1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
-        printError(FLF, "Failed to finalize encryption");
-        EVP_CIPHER_CTX_free(ctx);
-        return -1;
-    }
-    ciphertext_len += len;
-
-    /* Clean up */
-    EVP_CIPHER_CTX_free(ctx);
-    return ciphertext_len;
-}
 
 /**
  *
@@ -383,13 +178,13 @@ int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, 
  * @param ciphertext_len
  * @param plaintext
  *
- * @return
+ * @return plaintext_len || -1
  */
-int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_len, unsigned char* plaintext) {
+static int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_len, unsigned char* plaintext) {
     EVP_CIPHER_CTX* ctx;
     int len;
     int plaintext_len = -1;
-    unsigned char iv[33]={0};
+    unsigned char iv[33] = {0};
 
     if (strlen((char*)szKey) <= 32) {
         printError(FLF, "Key length must be greater than 32 characters");
@@ -435,107 +230,36 @@ int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_l
     return plaintext_len;
 }
 
-/**
- * @param msg: message to log
- * @param msg_len: length of the message
- * @param fullpath: /full/path/file
- * @param option: fopen option
- */
-void save_file(const char* msg, int msg_len, const char* fullpath, int option) {
-    int fd = -1;
-    char cmd[512] = {0};
-    char path[256] = {0};
-
-    if (msg == NULL || fullpath == NULL ) {
-        printError(FLF, "Invalid parameters");
-        return;
+static inline Licence_bool set_aes_bin(char* aes_bin) {
+    if (aes_bin == NULL) {
+        printError(FLF, "AES bin is NULL");
+        return license_false;
     }
-    strncpy(path, (char*)fullpath, sizeof(path) - 1);
-    dirname((char*)path);
-
-    sprintf(cmd, "mkdir -p %s", path);
-    system(cmd);
-    fd = open(fullpath, option);
-    if (fd == -1) {
-        printError(FLF, "Failed to open log file");
-        return;
-    }
-    write(fd, msg, msg_len);
-    close(fd);
+    memcpy(info.aes_bin, aes_bin, info.aes_len);
+    return license_true;
 }
 
-char* new_host_name() {
-    char host_name[128];
-    FILE* fp = NULL;
-
-    fp = popen("grep HOST_NAME $IV_HOME/data/sysconfig | cut -d'=' -f2| tr -d [:space:]", "r");
-    if (fp == NULL) {
-        printError(FLF, "Failed to run command");
-        return NULL;
-    }
-
-    if (fgets(host_name, sizeof(host_name) - 1, fp) == NULL) {
-        printError(FLF, "Failed to read command output");
-        pclose(fp);
-        return NULL;
-    }
-
-    pclose(fp);
-
-    return strdup(host_name);
-}
-
-bool init_license_info(Licence_info* license_info, char* license_code) {
-    if (license_info == NULL || license_code == NULL) {
-        printError(FLF, "Invalid Licence_info pointer");
-        return false;
-    }
-
-    memset(license_info, 0, sizeof(Licence_info));
-
-    license_info->mac_list = new_mac_list();
-    license_info->uuid = new_uuid();
-    license_info->host_name = new_host_name();
-    memcpy(license_info->hex_code, license_code, strlen(license_code));
-
-    sprintf(license_info->signature_row, "%s%s%s%s",
-         license_info->host_name, license_info->mac_list[0], license_info->hex_code, license_info->uuid);
-
-    create_sha256_signature((const void*)license_info->signature_row, NULL, license_info->sha256_signature);
-
-    // printf("row data : %s", license_info->signature_row);
-
-    return true;
-}
-
-
-/**
- * @brief 버퍼 내용을 헥사 덤프 형태로 출력
- * @param data 덤프할 데이터 포인터
- * @param size 데이터 크기
- * @param label 출력할 레이블 (NULL 가능)
- */
 void hex_dump(const void* data, size_t size, const char* label) {
     const unsigned char* bytes = (const unsigned char*)data;
     size_t i, j;
-    
+
     if (!data) {
         printf("hex_dump: NULL data pointer\n");
         return;
     }
-    
+
     if (label) {
         printf(COLOR_CYAN "=== %s ===" COLOR_RESET "\n", label);
     }
-    
+
     printf("Size: %zu bytes\n", size);
     printf("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ASCII\n");
     printf("--------  --------------------------------  --------------------------------  ----------------\n");
-    
+
     for (i = 0; i < size; i += 16) {
         // 오프셋 출력
         printf("%08zX  ", i);
-        
+
         // 헥사 값 출력 (16바이트씩)
         for (j = 0; j < 16; j++) {
             if (i + j < size) {
@@ -543,126 +267,80 @@ void hex_dump(const void* data, size_t size, const char* label) {
             } else {
                 printf("   ");  // 빈 공간
             }
-            
+
             // 8바이트마다 구분자 추가
             if (j == 7) {
                 printf(" ");
             }
         }
-        
+
         printf(" ");
-        
+
         // ASCII 문자 출력
         for (j = 0; j < 16 && i + j < size; j++) {
             char c = bytes[i + j];
             printf("%c", (c >= 32 && c <= 126) ? c : '.');
         }
-        
+
         printf("\n");
     }
     printf("\n");
 }
 
-/**
- * @brief Checks the license expiration date.
- *
- * If the expiration date is invalid or has passed, prints an error message and terminates the process.
- *
- * @return time_t license expire date. || 
- * 0 : unlimited expire date.
- */
-time_t license_check() {
-    Licence_info license_info = {0};
-    Crypt_info crypt_info = {0};
-    char fullpath[64] = {0};
+Licence_bool check_license() {
+    char license_path[232] = {0};
     int fd = 0;
-    char buf[1024] = {0};
-    char sha256[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
-    char **free_ptr = NULL;
-    int len = 0;
-    char *password = NULL;
+    char license_sha256[SHA256_DIGEST_LENGTH];
+    unsigned char passphrase[65] = "5e2e2a9e3f7f5c7f7e3e3f0f3b6c6a9d1d9e9f0f7c7e7d7e6f6e6f6d6c6b6a6a";
 
-    sprintf(fullpath, "%s/%s/%s", getenv("IV_HOME"), "data", ".license");
+    char buf[MAX_AES_BIN_LEN + SHA256_DIGEST_LENGTH] = {0};
 
-    fd = open(fullpath, O_RDONLY);
+    if (getenv("HOME") == NULL) {
+        printError(FLF, "HOME environment variable not set");
+        return license_false;
+    }
+
+    snprintf(license_path, sizeof(license_path), "%s/data/.license", getenv("HOME"));
+
+    printf("license_path %s\n", license_path);
+    fd = open(license_path, O_RDONLY);
     if (fd < 0) {
-        printError(FLF, "Failed to open license file");
-        exit(EXIT_FAILURE);
-    }
-    len = read(fd, buf, sizeof(buf) - 1);
-
-    memcpy(sha256, buf, SHA256_DIGEST_LENGTH);
-    memcpy(license_info.aes_row, buf + SHA256_DIGEST_LENGTH, len - SHA256_DIGEST_LENGTH);
-
-    memset(buf, 0, sizeof(buf));
-    bin2hex(license_info.aes_row, len - SHA256_DIGEST_LENGTH, (unsigned char*)buf);
-
-    if (!init_license_info(&license_info, buf)) {
-        printError(FLF, "Failed to initialize license info");
-        exit(EXIT_FAILURE);
+        printError(FLF, "License file not found");
+        return license_false;
     }
 
-    if (memcmp(license_info.sha256_signature, sha256, SHA256_DIGEST_LENGTH)) {
+    info.aes_len = read(fd, buf, sizeof(buf)) - SHA256_DIGEST_LENGTH;
+    if (info.aes_len < 0) {
+        printError(FLF, "Failed to read license file");
+        goto error;
+    }
+
+    memcpy(license_sha256, buf, SHA256_DIGEST_LENGTH);
+
+    set_aes_bin((char*)buf + SHA256_DIGEST_LENGTH);
+    set_uuid();
+    set_mac();
+    set_sha256_signature();
+
+    hex_dump(buf, SHA256_DIGEST_LENGTH + info.aes_len, "check license full");  // debug
+    hex_dump(license_sha256, SHA256_DIGEST_LENGTH, "License File SHA256 ");    // debug
+    hex_dump(info.sha256, SHA256_DIGEST_LENGTH, "create sha256");              // debug
+    hex_dump(info.aes_bin, info.aes_len, "AES Bin");                           // debug
+
+    if (memcmp(license_sha256, info.sha256, SHA256_DIGEST_LENGTH) != 0) {
         printError(FLF, "Invalid license");
-        exit(EXIT_FAILURE);
+        goto error;
     }
 
-    free_ptr = license_info.mac_list;
-    while (*free_ptr) {
-        free(*free_ptr);
-        free_ptr++;
-    }
-    free(license_info.mac_list);
-    free(license_info.host_name);
-    free(license_info.uuid);
-    license_info.mac_list = NULL;
-    license_info.host_name = NULL;
-    license_info.uuid = NULL;
-
-    len = hex2bin((char *)license_info.hex_code, (unsigned char *)buf);
-
-
-    password = "helloworld12345678901234567890142";
-    if (decryptEVP((unsigned char *)password, (unsigned char*)buf, len, (unsigned char*)&crypt_info) < 0) {
-        printError(FLF, "Failed to decrypt license");
-        exit(1);
-    }
-
-    return crypt_info.expire_time;
-}
-
-/**
- * @param run_main_func: function pointer to run main logic
- * @param argc: argument count
- * @param argv: argument vector
- * @param envp: environment pointer
- * @param check_time: time interval to check license (seconds), if unlimited or less than 0, run indefinitely
- */
-void run_main_logic(void (*run_main_func)(int, char **, char **), int argc, char **argv, char **envp, int check_time) {
-    time_t now = 0;
-    time_t license_check_time = 0;
-    time_t expire_date = 0;
-
-    now = time(NULL);
-    license_check_time = now + check_time;
-    expire_date = license_check();
-
-    printf(COLOR_GREEN"expire date :%s\n"COLOR_RESET, expire_date ? ctime(&expire_date) : "N/A");
-    if (expire_date < 0) {
+    if (decryptEVP(passphrase, info.aes_bin, MAX_AES_BIN_LEN, (unsigned char*)&(info.crypt_info)) < 0) {
         printError(FLF, "Invalid license");
-        exit(EXIT_FAILURE);
-    } else if (check_time <= UNLIMITED || expire_date == UNLIMITED) {
-        while (true) {
-            run_main_func(argc, argv, envp);
-        }
+        goto error;
     }
-    while (now < expire_date) {
-        run_main_func(argc, argv, envp);
-        if (difftime(now, license_check_time) >= 0) {
-            license_check();
-            license_check_time += check_time;
-        }
-        now = time(NULL);
-    }
-}
 
+    close(fd);
+    return license_true;
+
+error:
+    close(fd);
+    return license_false;
+}
