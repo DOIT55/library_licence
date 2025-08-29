@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/29 14:37:50 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/29 14:59:47 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,7 @@ static License_error_code set_sha256_signature() {
     }
 
     EVP_MD_CTX_free(ctx);
-    return Result_success;
+    return License_result_success;
 }
 #else
 
@@ -158,7 +158,7 @@ static License_error_code set_sha256_signature() {
         printError(FLF, "Failed to finalize SHA256");
         return Sha256_final_error;
     }
-    return Result_success;
+    return License_result_success;
 }
 #endif
 
@@ -223,7 +223,7 @@ License_error_code load_license_file() {
     char license_path[232] = {0};
     int fd = 0;
     char buf[MAX_AES_BIN_LEN + SHA256_DIGEST_LENGTH + MAX_AES_PADDING] = {0};
-    int code = Result_success;
+    int code = License_result_success;
     unsigned char passphrase[65] = "012345678901234567890123456789012";
 
     if (getenv("HOME") == NULL) {

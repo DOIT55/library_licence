@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/29 14:39:50 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/29 14:59:53 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,7 @@ typedef struct {
 extern License_generator_info info;
 
 #define FOREACH_ERROR_CODE_LIST(_ERROR_CODE_LIST_) \
-        _ERROR_CODE_LIST_(Result_success)\
+        _ERROR_CODE_LIST_(License_result_success)\
         _ERROR_CODE_LIST_(Sha256_init_error)\
         _ERROR_CODE_LIST_(Sha256_create_error)\
         _ERROR_CODE_LIST_(Sha256_update_error)\
@@ -170,7 +170,7 @@ static inline int is_license_valid_period(){
  *
  * @return The license expiration time, or 0 if the license is infinite.
  */
-static inline time_t get_expire_time() {
+static inline time_t get_license_expire_time() {
     return info.crypt_info.expire_time;
 }
 
@@ -187,7 +187,7 @@ static inline time_t get_expire_time() {
  * @see is_license_valid()
  * @return request time
  */
-static inline time_t get_create_date() {
+static inline time_t get_license_create_date() {
     return info.crypt_info.request_time;
 }
 

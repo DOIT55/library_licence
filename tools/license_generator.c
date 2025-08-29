@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/29 14:44:07 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/29 14:59:47 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,7 +88,7 @@ static License_error_code set_sha256_signature() {
     }
 
     EVP_MD_CTX_free(ctx);
-    return Result_success;
+    return License_result_success;
 }
 #else
 
@@ -115,7 +115,7 @@ static License_error_code set_sha256_signature() {
     if (SHA256_Final(info.signature_sha256, &sha256) == license_false) {
         return Sha256_final_error;
     }
-    return Result_success;
+    return License_result_success;
 }
 #endif
 
@@ -324,7 +324,7 @@ static License_error_code set_options(int argc, char** argv) {
         info.crypt_info.expire_time = 0;
     }
 
-    return Result_success;
+    return License_result_success;
 }
 
 int main(int argc, char** argv) {
@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
     char cmd[256] = {0};
 
     if ((argc > 7) 
-    || (set_options(argc, argv) != Result_success)) {
+    || (set_options(argc, argv) != License_result_success)) {
         usage((const char**)argv);
         return EXIT_FAILURE;
     }
