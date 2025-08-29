@@ -3,7 +3,7 @@ AR_FLAGS = rcs
 NAME = test_main
 LIB_NAME = liblicense.a
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -lpthread -ldl -fPIE #-g3 -fsanitize=address
+CFLAGS = -Wall -Wextra -Werror -lpthread -ldl -fPIE -Os #-g3 -fsanitize=address
 INCLUDE = -I../include
 
 LIB_SRCS = liblicense.c

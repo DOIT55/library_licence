@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   liblicense.h                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
+/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/28 23:11:16 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/29 14:39:50 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,11 +75,6 @@
 #define DEBUG_OPENSSL_VERSION()
 #endif
 
-typedef enum {
-    license_false,
-    license_true
-} Licence_bool;
-
 typedef struct __attribute__((__packed__)) {
     time_t request_time;
     time_t expire_time;
@@ -88,25 +83,90 @@ typedef struct __attribute__((__packed__)) {
 typedef struct {
     Crypt_info crypt_info;
     int req_time;
-    unsigned char sha256[SHA256_DIGEST_LENGTH];
+    unsigned char signature_sha256[SHA256_DIGEST_LENGTH];
+    unsigned char compare_sha256[SHA256_DIGEST_LENGTH];
     unsigned char aes_bin[MAX_AES_BIN_LEN];
     char uuid[MAX_UUID_LEN];
     char mac[MAX_MAC_LEN];
     int aes_len;
 } License_generator_info;
 
-static License_generator_info info;
+extern License_generator_info info;
 
-Licence_bool check_license();
+#define FOREACH_ERROR_CODE_LIST(_ERROR_CODE_LIST_) \
+        _ERROR_CODE_LIST_(Result_success)\
+        _ERROR_CODE_LIST_(Sha256_init_error)\
+        _ERROR_CODE_LIST_(Sha256_create_error)\
+        _ERROR_CODE_LIST_(Sha256_update_error)\
+        _ERROR_CODE_LIST_(Sha256_final_error)\
+        _ERROR_CODE_LIST_(Sha256_invalid_parameter_error)\
+        _ERROR_CODE_LIST_(Aes256_key_size_error)\
+        _ERROR_CODE_LIST_(Aes256_new_error)\
+        _ERROR_CODE_LIST_(Aes256_init_error)\
+        _ERROR_CODE_LIST_(Aes256_update_error)\
+        _ERROR_CODE_LIST_(Aes256_final_error)\
+        _ERROR_CODE_LIST_(Env_home_error)\
+        _ERROR_CODE_LIST_(License_file_not_found_error)\
+        _ERROR_CODE_LIST_(License_file_read_error)\
+        _ERROR_CODE_LIST_(License_invalid_error)\
+        _ERROR_CODE_LIST_(Set_mac_error)\
+        _ERROR_CODE_LIST_(License_invalid_parameter_error)\
+
+
+#define GENERATE_ERROR_CODE_ENUM(_ERROR_CODE_LIST_ENUM_) _ERROR_CODE_LIST_ENUM_,
+#define GENERATE_ERROR_CODE_STRING(_ERROR_CODE_LIST_STRING_) #_ERROR_CODE_LIST_STRING_,
+
+typedef enum {
+    FOREACH_ERROR_CODE_LIST(GENERATE_ERROR_CODE_ENUM)
+    ERROR_CODE_MAX
+} License_error_code;
+
+/**
+ * @brief Loads and initializes the license file required for library usage.
+ *
+ * This function must be called at least once before using any license-dependent
+ * functionality. It performs internal initialization and validation routines,
+ * including checking the existence and integrity of the license file located at:
+ * `$HOME/data/.license`.
+ *
+ * @return License_error_code indicating success or the type of failure encountered.
+ */
+License_error_code load_license_file();
+
+static inline char* license_error_code_to_string(License_error_code code) {
+    int mask = code >> 31;
+    char* error_code[] = {FOREACH_ERROR_CODE_LIST(GENERATE_ERROR_CODE_STRING)};
+
+    return error_code[(code + mask) ^ mask];
+}
+
+/**
+ * @brief Checks whether the current time is within the license validity period.
+ *
+ * This function compares the current system time with the license's expiration time
+ * to determine if the license is still valid.
+ *
+ * @note The function load_license_file() must be called at least once before using this function,
+ *       as it relies on initialized license data.
+ * @see load_license_file()
+ *
+ * @return 1 if the license is valid (not expired), 0 otherwise.
+ */
+
+static inline int is_license_valid_period(){
+    return (info.crypt_info.expire_time == 0 ||
+        info.crypt_info.expire_time > time(NULL));
+}
 
 /**
  * @brief Executes the main feature operation after license verification.
  *
- * This function requires that check_license() has been called at least once prior to its invocation.
+ * This function requires that is_license_valid() has been called at least once prior to its invocation.
  * Not verifying the license beforehand may lead to undefined behavior or security risks.
  *
- * @note Always call check_license() before using this function.
- * @see check_license()
+ * @note The function load_license_file() must be called at least once before using this function,
+ *       as it relies on initialized license data.
+ * @see load_license_file()
  *
  * @return The license expiration time, or 0 if the license is infinite.
  */
@@ -117,12 +177,14 @@ static inline time_t get_expire_time() {
 /**
  * @brief Performs the main feature operation.
  * @details This function depends on prior license verification.
- *          You must call check_license() at least once before invoking this function.
+ *          You must call is_license_valid() at least once before invoking this function.
  *          Failure to do so may result in undefined behavior or security violations.
  *
- * @note Call check_license() before using this function.
+ * @note The function load_license_file() must be called at least once before using this function,
+ *       as it relies on initialized license data.
+ * @see load_license_file()
  *
- * @see check_license()
+ * @see is_license_valid()
  * @return request time
  */
 static inline time_t get_create_date() {

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   license_generator.c                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
+/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/28 23:30:25 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/29 14:44:07 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,14 +52,14 @@ static void usage(const char** argv) {
 
 #if USE_NEW_SHA256
 
-static Licence_bool set_sha256_signature() {
+static License_error_code set_sha256_signature() {
     EVP_MD_CTX* ctx = NULL;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
 
     if (info.mac[0] == '\0' || info.aes_bin[0] == '\0') {
         printError(FLF, "Missing required fields");
-        return license_false;
+        return Sha256_invalid_parameter_error;
     }
 
     memcpy(buf, info.mac, MAX_MAC_LEN);
@@ -68,43 +68,37 @@ static Licence_bool set_sha256_signature() {
 
     ctx = EVP_MD_CTX_new();
     if (!ctx) {
-        printError(FLF, "Failed to create EVP_MD_CTX");
-        return license_false;
+        return Sha256_create_error;
     }
 
     if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1) {
-        printError(FLF, "Failed to initialize EVP_Digest");
-        goto error;
+        EVP_MD_CTX_free(ctx);
+        return Sha256_init_error;
     }
 
     data_len = sizeof(buf);
     if (EVP_DigestUpdate(ctx, buf, data_len) != 1) {
-        printError(FLF, "Failed to update EVP_Digest");
-        goto error;
+        EVP_MD_CTX_free(ctx);
+        return Sha256_update_error;
     }
 
-    if (EVP_DigestFinal_ex(ctx, info.sha256, NULL) != 1) {
-        printError(FLF, "Failed to finalize EVP_Digest");
-        goto error;
+    if (EVP_DigestFinal_ex(ctx, info.signature_sha256, NULL) != 1) {
+        EVP_MD_CTX_free(ctx);
+        return Sha256_final_error;
     }
 
     EVP_MD_CTX_free(ctx);
-    return license_true;
-
-error:
-    EVP_MD_CTX_free(ctx);
-    return license_false;
+    return Result_success;
 }
 #else
 
-static Licence_bool set_sha256_signature() {
+static License_error_code set_sha256_signature() {
     SHA256_CTX sha256;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
 
     if (info.mac == NULL || info.aes_bin == NULL) {
-        printError(FLF, "Missing required fields");
-        return license_false;
+        return Sha256_invalid_parameter_error;
     }
 
     memcpy(buf, info.mac, MAX_MAC_LEN);
@@ -112,19 +106,16 @@ static Licence_bool set_sha256_signature() {
     memcpy(buf + data_len + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
 
     if (SHA256_Init(&sha256) == license_false) {
-        printError(FLF, "Failed to initialize SHA256");
-        return license_false;
+        return Sha256_init_error;
     }
     data_len = sizeof(buf);
     if (SHA256_Update(&sha256, buf, data_len) == license_false) {
-        printError(FLF, "Failed to update SHA256");
-        return license_false;
+        return Sha256_update_error;
     }
-    if (SHA256_Final(info.sha256, &sha256) == license_false) {
-        printError(FLF, "Failed to finalize SHA256");
-        return license_false;
+    if (SHA256_Final(info.signature_sha256, &sha256) == license_false) {
+        return Sha256_final_error;
     }
-    return license_true;
+    return Result_success;
 }
 #endif
 
@@ -144,7 +135,7 @@ static int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintex
     int ciphertext_len;
     unsigned char iv[33] = {0};
 
-    if (strlen((char*)key) <= 32) {
+    if (strlen((char*)key) < 32) {
         printError(FLF, "Key length must be greater than 32 characters");
         return -1;
     }
@@ -282,14 +273,13 @@ static char* set_uuid() {
     return info.uuid;
 }
 
-static Licence_bool set_options(int argc, char** argv) {
+static License_error_code set_options(int argc, char** argv) {
     int i = 0;
     int is_option = 0;
     int require_number = 0;
 
     if (argv == NULL) {
-        printError(FLF, "Invalid parameters");
-        return license_false;
+        return License_invalid_parameter_error;
     }
 
     while (i < argc) {
@@ -328,78 +318,25 @@ static Licence_bool set_options(int argc, char** argv) {
     if (is_option) {
         info.crypt_info.expire_time += info.crypt_info.request_time;
         if ((info.crypt_info.request_time >= info.crypt_info.expire_time)) {
-            printError(FLF, "Invalid expire time");
-            return license_false;
+            return License_invalid_error;
         }
     } else {
         info.crypt_info.expire_time = 0;
     }
 
-    return license_true;
-}
-
-void hex_dump(const void* data, size_t size, const char* label) {
-    const unsigned char* bytes = (const unsigned char*)data;
-    size_t i, j;
-
-    if (!data) {
-        printf("hex_dump: NULL data pointer\n");
-        return;
-    }
-
-    if (label) {
-        printf(COLOR_CYAN "=== %s ===" COLOR_RESET "\n", label);
-    }
-
-    printf("Size: %zu bytes\n", size);
-    printf("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ASCII\n");
-    printf("--------  --------------------------------  --------------------------------  ----------------\n");
-
-    for (i = 0; i < size; i += 16) {
-        // 오프셋 출력
-        printf("%08zX  ", i);
-
-        // 헥사 값 출력 (16바이트씩)
-        for (j = 0; j < 16; j++) {
-            if (i + j < size) {
-                printf("%02X ", bytes[i + j]);
-            } else {
-                printf("   ");  // 빈 공간
-            }
-
-            // 8바이트마다 구분자 추가
-            if (j == 7) {
-                printf(" ");
-            }
-        }
-
-        printf(" ");
-
-        // ASCII 문자 출력
-        for (j = 0; j < 16 && i + j < size; j++) {
-            char c = bytes[i + j];
-            printf("%c", (c >= 32 && c <= 126) ? c : '.');
-        }
-
-        printf("\n");
-    }
-    printf("\n");
+    return Result_success;
 }
 
 int main(int argc, char** argv) {
-    unsigned char passphrase[65] = "5e2e2a9e3f7f5c7f7e3e3f0f3b6c6a9d1d9e9f0f7c7e7d7e6f6e6f6d6c6b6a6a";
+    unsigned char passphrase[65] = "012345678901234567890123456789012";
     printf("%s\n", OPENSSL_VERSION_TEXT);
     char buf[SHA256_DIGEST_LENGTH + MAX_AES_BIN_LEN] = {0};
     char path[232] = {0};
     char cmd[256] = {0};
 
-    if (argc > 7) {
+    if ((argc > 7) 
+    || (set_options(argc, argv) != Result_success)) {
         usage((const char**)argv);
-        return EXIT_FAILURE;
-    }
-
-    if (set_options(argc, argv) == license_false) {
-        printError(FLF, "check options\n");
         return EXIT_FAILURE;
     }
 
@@ -409,25 +346,21 @@ int main(int argc, char** argv) {
     set_mac();
     set_sha256_signature();
 
-    memcpy(buf, info.sha256, SHA256_DIGEST_LENGTH);
+    memcpy(buf, info.signature_sha256, SHA256_DIGEST_LENGTH);
     memcpy(buf + SHA256_DIGEST_LENGTH, info.aes_bin, info.aes_len);
 
-    hex_dump(buf, SHA256_DIGEST_LENGTH + info.aes_len, "Generated License Data");  // debug
-    hex_dump(info.sha256, SHA256_DIGEST_LENGTH, "SHA256 Signature");               // debug
-    hex_dump(info.aes_bin, info.aes_len, "AES Bin");                               // debug
-
     snprintf(path, sizeof(path), "%s/data/.license", getenv("HOME"));
-    save_file(buf, SHA256_DIGEST_LENGTH + info.aes_len, path, O_RDWR | O_CREAT | O_TRUNC);
+    save_file(buf, SHA256_DIGEST_LENGTH + info.aes_len, path, O_WRONLY | O_CREAT | O_TRUNC);
 
-    // ✅ packed 구조체 멤버 주소 문제 해결: 임시 변수 사용
+    // packed 구조체 멤버 주소 문제 해결: 임시 변수 사용
     time_t create_time = info.crypt_info.request_time;
     time_t expire_time = info.crypt_info.expire_time;
 
     printf(COLOR_GREEN "license create time : %s\n", ctime(&create_time));
     if (expire_time == 0) {
-        printf("license expire time : never expire\n" COLOR_RESET);
+        printf("license expire time : infinite\n" COLOR_RESET);
     } else {
-        printf("license expire time : %s" COLOR_RESET, ctime(&expire_time));
+        printf("license expire time : %s\n" COLOR_RESET, ctime(&expire_time));
     }
 
     strcat(cmd, "rm -rf ");

@@ -3,16 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   liblicense.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: HaJuYoung (juha) <contemplation.person@gma +#+  +:+       +#+        */
+/*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/28 23:32:41 by HaJuYoung (juha) ###   ########.fr       */
+/*   Updated: 2025/08/29 14:37:50 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "liblicense.h"
 
-static License_generator_info info;
+License_generator_info info;
 
 static void printError(const char* file, const int line, const char* function_name, const char* msg) {
     if (file == NULL || line == 0 || function_name == NULL) {
@@ -94,14 +94,14 @@ static char* set_uuid() {
 
 #if USE_NEW_SHA256
 
-static Licence_bool set_sha256_signature() {
+static License_error_code set_sha256_signature() {
     EVP_MD_CTX* ctx = NULL;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
 
     if (info.mac[0] == '\0' || info.aes_bin[0] == '\0') {
         printError(FLF, "Missing required fields");
-        return license_false;
+        return Sha256_invalid_parameter_error;
     }
 
     memcpy(buf, info.mac, MAX_MAC_LEN);
@@ -110,43 +110,37 @@ static Licence_bool set_sha256_signature() {
 
     ctx = EVP_MD_CTX_new();
     if (!ctx) {
-        printError(FLF, "Failed to create EVP_MD_CTX");
-        return license_false;
+        return Sha256_create_error;
     }
 
     if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1) {
-        printError(FLF, "Failed to initialize EVP_Digest");
-        goto error;
+        EVP_MD_CTX_free(ctx);
+        return Sha256_init_error;
     }
 
     data_len = sizeof(buf);
     if (EVP_DigestUpdate(ctx, buf, data_len) != 1) {
-        printError(FLF, "Failed to update EVP_Digest");
-        goto error;
+        EVP_MD_CTX_free(ctx);
+        return Sha256_update_error;
     }
 
-    if (EVP_DigestFinal_ex(ctx, info.sha256, NULL) != 1) {
-        printError(FLF, "Failed to finalize EVP_Digest");
-        goto error;
+    if (EVP_DigestFinal_ex(ctx, info.signature_sha256, NULL) != 1) {
+        EVP_MD_CTX_free(ctx);
+        return Sha256_final_error;
     }
 
     EVP_MD_CTX_free(ctx);
-    return license_true;
-
-error:
-    EVP_MD_CTX_free(ctx);
-    return license_false;
+    return Result_success;
 }
 #else
 
-static Licence_bool set_sha256_signature() {
+static License_error_code set_sha256_signature() {
     SHA256_CTX sha256;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
 
     if (info.mac == NULL || info.aes_bin == NULL) {
-        printError(FLF, "Missing required fields");
-        return license_false;
+        return Sha256_invalid_parameter_error;
     }
 
     memcpy(buf, info.mac, MAX_MAC_LEN);
@@ -154,19 +148,17 @@ static Licence_bool set_sha256_signature() {
     memcpy(buf + data_len + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
 
     if (SHA256_Init(&sha256) == license_false) {
-        printError(FLF, "Failed to initialize SHA256");
-        return license_false;
+        return Sha256_init_error;
     }
     data_len = sizeof(buf);
     if (SHA256_Update(&sha256, buf, data_len) == license_false) {
-        printError(FLF, "Failed to update SHA256");
-        return license_false;
+        return Sha256_update_error;
     }
     if (SHA256_Final(info.sha256, &sha256) == license_false) {
         printError(FLF, "Failed to finalize SHA256");
-        return license_false;
+        return Sha256_final_error;
     }
-    return license_true;
+    return Result_success;
 }
 #endif
 
@@ -186,21 +178,18 @@ static int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphe
     int plaintext_len = -1;
     unsigned char iv[33] = {0};
 
-    if (strlen((char*)szKey) <= 32) {
-        printError(FLF, "Key length must be greater than 32 characters");
-        return -1;
+    if (strlen((char*)szKey) < 32) {
+        return -Aes256_key_size_error;
     }
     strncpy((char*)iv, (char*)szKey, 32);
 
     if (!(ctx = EVP_CIPHER_CTX_new())) {
-        printError(FLF, "Failed to create cipher context");
-        return -1;
+        return -Aes256_new_error;
     }
 
     if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, szKey, iv)) {
-        printError(FLF, "Failed to initialize decryption");
         EVP_CIPHER_CTX_free(ctx);
-        return -1;
+        return -Aes256_init_error;
     }
 
     /* Provide the message to be decrypted, and obtain the plaintext output.
@@ -210,7 +199,7 @@ static int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphe
     if (1 != EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len)) {
         printError(FLF, "Failed to decrypt data");
         EVP_CIPHER_CTX_free(ctx);
-        return -1;
+        return -Aes256_update_error;
     }
 
     plaintext_len = len;
@@ -221,7 +210,7 @@ static int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphe
     if (1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
         printError(FLF, "Failed to finalize decryption");
         EVP_CIPHER_CTX_free(ctx);
-        return -1;
+        return -Aes256_final_error;
     }
     plaintext_len += len;
 
@@ -230,13 +219,53 @@ static int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphe
     return plaintext_len;
 }
 
-static inline Licence_bool set_aes_bin(char* aes_bin) {
-    if (aes_bin == NULL) {
-        printError(FLF, "AES bin is NULL");
-        return license_false;
+License_error_code load_license_file() {
+    char license_path[232] = {0};
+    int fd = 0;
+    char buf[MAX_AES_BIN_LEN + SHA256_DIGEST_LENGTH + MAX_AES_PADDING] = {0};
+    int code = Result_success;
+    unsigned char passphrase[65] = "012345678901234567890123456789012";
+
+    if (getenv("HOME") == NULL) {
+        return Env_home_error;
     }
-    memcpy(info.aes_bin, aes_bin, info.aes_len);
-    return license_true;
+
+    snprintf(license_path, sizeof(license_path), "%s/data/.license", getenv("HOME"));
+
+    fd = open(license_path, O_RDONLY);
+    if (fd < 0) {
+        return License_file_not_found_error;
+    }
+
+    info.aes_len = read(fd, buf, sizeof(buf)) - SHA256_DIGEST_LENGTH;
+    if (info.aes_len < 0) {
+        code = License_file_read_error;
+        goto result;
+    }
+
+    memcpy(info.compare_sha256, buf, SHA256_DIGEST_LENGTH);
+    memcpy(info.aes_bin, buf + SHA256_DIGEST_LENGTH, info.aes_len);
+
+    if (set_mac() == NULL) {
+        code = Set_mac_error;
+        goto result;
+    }
+
+    set_uuid();
+
+    code = set_sha256_signature();
+
+    if ((memcmp(info.compare_sha256, info.signature_sha256, SHA256_DIGEST_LENGTH) != 0) 
+        || (decryptEVP(passphrase, info.aes_bin, info.aes_len, (unsigned char*)&(info.crypt_info)) < 0)) {
+
+        code = License_invalid_error;
+        goto result;
+    }
+
+result:
+    close(fd);
+    return code;
+
 }
 
 void hex_dump(const void* data, size_t size, const char* label) {
@@ -285,62 +314,4 @@ void hex_dump(const void* data, size_t size, const char* label) {
         printf("\n");
     }
     printf("\n");
-}
-
-Licence_bool check_license() {
-    char license_path[232] = {0};
-    int fd = 0;
-    char license_sha256[SHA256_DIGEST_LENGTH];
-    unsigned char passphrase[65] = "5e2e2a9e3f7f5c7f7e3e3f0f3b6c6a9d1d9e9f0f7c7e7d7e6f6e6f6d6c6b6a6a";
-
-    char buf[MAX_AES_BIN_LEN + SHA256_DIGEST_LENGTH] = {0};
-
-    if (getenv("HOME") == NULL) {
-        printError(FLF, "HOME environment variable not set");
-        return license_false;
-    }
-
-    snprintf(license_path, sizeof(license_path), "%s/data/.license", getenv("HOME"));
-
-    printf("license_path %s\n", license_path);
-    fd = open(license_path, O_RDONLY);
-    if (fd < 0) {
-        printError(FLF, "License file not found");
-        return license_false;
-    }
-
-    info.aes_len = read(fd, buf, sizeof(buf)) - SHA256_DIGEST_LENGTH;
-    if (info.aes_len < 0) {
-        printError(FLF, "Failed to read license file");
-        goto error;
-    }
-
-    memcpy(license_sha256, buf, SHA256_DIGEST_LENGTH);
-
-    set_aes_bin((char*)buf + SHA256_DIGEST_LENGTH);
-    set_uuid();
-    set_mac();
-    set_sha256_signature();
-
-    hex_dump(buf, SHA256_DIGEST_LENGTH + info.aes_len, "check license full");  // debug
-    hex_dump(license_sha256, SHA256_DIGEST_LENGTH, "License File SHA256 ");    // debug
-    hex_dump(info.sha256, SHA256_DIGEST_LENGTH, "create sha256");              // debug
-    hex_dump(info.aes_bin, info.aes_len, "AES Bin");                           // debug
-
-    if (memcmp(license_sha256, info.sha256, SHA256_DIGEST_LENGTH) != 0) {
-        printError(FLF, "Invalid license");
-        goto error;
-    }
-
-    if (decryptEVP(passphrase, info.aes_bin, MAX_AES_BIN_LEN, (unsigned char*)&(info.crypt_info)) < 0) {
-        printError(FLF, "Invalid license");
-        goto error;
-    }
-
-    close(fd);
-    return license_true;
-
-error:
-    close(fd);
-    return license_false;
 }
