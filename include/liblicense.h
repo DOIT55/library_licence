@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/29 14:59:53 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/29 17:44:56 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,10 +133,10 @@ typedef enum {
  */
 License_error_code load_license_file();
 
-static inline char* license_error_code_to_string(License_error_code code) {
-    int mask = code >> 31;
-    char* error_code[] = {FOREACH_ERROR_CODE_LIST(GENERATE_ERROR_CODE_STRING)};
+static const char* error_code[] = {FOREACH_ERROR_CODE_LIST(GENERATE_ERROR_CODE_STRING)};
 
+static inline const char* license_error_code_to_string(License_error_code code) {
+    int mask = code >> 31;
     return error_code[(code + mask) ^ mask];
 }
 

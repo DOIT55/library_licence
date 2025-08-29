@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/29 14:59:47 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/08/29 16:58:48 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -266,52 +266,4 @@ result:
     close(fd);
     return code;
 
-}
-
-void hex_dump(const void* data, size_t size, const char* label) {
-    const unsigned char* bytes = (const unsigned char*)data;
-    size_t i, j;
-
-    if (!data) {
-        printf("hex_dump: NULL data pointer\n");
-        return;
-    }
-
-    if (label) {
-        printf(COLOR_CYAN "=== %s ===" COLOR_RESET "\n", label);
-    }
-
-    printf("Size: %zu bytes\n", size);
-    printf("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F  ASCII\n");
-    printf("--------  --------------------------------  --------------------------------  ----------------\n");
-
-    for (i = 0; i < size; i += 16) {
-        // 오프셋 출력
-        printf("%08zX  ", i);
-
-        // 헥사 값 출력 (16바이트씩)
-        for (j = 0; j < 16; j++) {
-            if (i + j < size) {
-                printf("%02X ", bytes[i + j]);
-            } else {
-                printf("   ");  // 빈 공간
-            }
-
-            // 8바이트마다 구분자 추가
-            if (j == 7) {
-                printf(" ");
-            }
-        }
-
-        printf(" ");
-
-        // ASCII 문자 출력
-        for (j = 0; j < 16 && i + j < size; j++) {
-            char c = bytes[i + j];
-            printf("%c", (c >= 32 && c <= 126) ? c : '.');
-        }
-
-        printf("\n");
-    }
-    printf("\n");
 }
