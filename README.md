@@ -193,9 +193,11 @@ typedef struct {
 ## 9. FAQ (요약)
 
 Q. 라이센스가 무제한인지 어떻게 알 수 있나요?  
+
 A. `get_license_expire_time()` 반환값이 0이면 무제한입니다.
 
 Q. 최초 호출 순서는?
+
 A. `load_license_file()` → (성공 시) 나머지 API 호출.
 
 ---
