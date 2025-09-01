@@ -8,13 +8,21 @@ OpenSSL을 활용해 SHA-256 해시 및 AES-256-CBC 복호화를 수행.
 ---
 ## 1. 프로젝트 개요
 
-| 구분 | 설명 |
-|------|------|
-| 목적 | 배포 애플리케이션의 사용 허용 기간/환경을 간단히 검증 |
-| 라이센스 파일 | `$HOME/data/.license` (SHA256 + AES 암호문 구조) |
-| 무결성 방식 | MAC + 암호 데이터 + UUID 결합 후 SHA-256 서명 비교 |
-| 복호화 | AES-256-CBC (OpenSSL EVP) |
-| 지원 OS | Linux (현재 POSIX 경로/`/sys` 의존) |
+<table style="border-collapse:collapse;width:100%;font-size:15px;">
+<thead>
+<tr style="background:#001f4d;color:white;">
+<th style="border:1px solid #bbb;padding:8px 16px;text-align:center;">구분</th>
+<th style="border:1px solid #bbb;padding:8px 16px;text-align:center;">설명</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">목적</td><td style="border:1px solid #bbb;padding:8px 16px;">배포 애플리케이션의 사용 허용 기간/환경을 간단히 검증</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">라이센스 파일</td><td style="border:1px solid #bbb;padding:8px 16px;"><code>$HOME/data/.license</code> (SHA256 + AES 암호문 구조)</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">무결성 방식</td><td style="border:1px solid #bbb;padding:8px 16px;">MAC + 암호 데이터 + UUID 결합 후 SHA-256 서명 비교</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">복호화</td><td style="border:1px solid #bbb;padding:8px 16px;">AES-256-CBC (OpenSSL EVP)</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">지원 OS</td><td style="border:1px solid #bbb;padding:8px 16px;">Linux (현재 POSIX 경로/<code>/sys</code> 의존)</td></tr>
+</tbody>
+</table>
 
 ### * 구조 요약:
 1. `load_license_file()` 호출 → 라이센스 파일 읽기
@@ -34,9 +42,9 @@ OpenSSL을 활용해 SHA-256 해시 및 AES-256-CBC 복호화를 수행.
 include/liblicense.h        공개 헤더
 libsrc/liblicense.c         라이브러리 구현
 tools/license_generator.c   라이센스 생성 도구
-data/.license               샘플 라이센스 파일
+data/.license               샘플 라이센스 파일 (make 후 생성)
 bin/main_test               성능 및 기능 검증 실행 파일 (make 후 생성)
-lib/liblicense.a            정적 라이브러리 산출물
+lib/liblicense.a            정적 라이브러리 산출물 (make 후 생성)
 ```
 
 ---
@@ -105,30 +113,48 @@ typedef struct {
 ---
 ## 5. 에러 코드
 
-| 코드 | 의미 (요약) |
-|------|-------------|
-| License_result_success | 성공 |
-| Sha256_* | SHA-256 초기화/갱신/최종 처리 실패 |
-| Aes256_* | AES 키 길이/컨텍스트/복호화 단계 실패 |
-| Env_home_error | HOME 환경변수 미설정 |
-| License_file_not_found_error | 라이센스 파일 없음 |
-| License_file_read_error | 파일 읽기 실패 |
-| License_invalid_error | 서명 불일치 또는 복호화 실패 |
-| Set_mac_error | MAC 주소 수집 실패 |
-| License_invalid_parameter_error | 내부 파라미터 검증 실패 |
+<table style="border-collapse:collapse;width:100%;font-size:15px;">
+<thead>
+<tr style="background:#001f4d;color:white;">
+<th style="border:1px solid #bbb;padding:8px 16px;text-align:center;">코드</th>
+<th style="border:1px solid #bbb;padding:8px 16px;text-align:center;">의미 (요약)</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">License_result_success</td><td style="border:1px solid #bbb;padding:8px 16px;">성공</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">Sha256_*</td><td style="border:1px solid #bbb;padding:8px 16px;">SHA-256 초기화/갱신/최종 처리 실패</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">Aes256_*</td><td style="border:1px solid #bbb;padding:8px 16px;">AES 키 길이/컨텍스트/복호화 단계 실패</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">Env_home_error</td><td style="border:1px solid #bbb;padding:8px 16px;">HOME 환경변수 미설정</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">License_file_not_found_error</td><td style="border:1px solid #bbb;padding:8px 16px;">라이센스 파일 없음</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">License_file_read_error</td><td style="border:1px solid #bbb;padding:8px 16px;">파일 읽기 실패</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">License_invalid_error</td><td style="border:1px solid #bbb;padding:8px 16px;">서명 불일치 또는 복호화 실패</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">Set_mac_error</td><td style="border:1px solid #bbb;padding:8px 16px;">MAC 주소 수집 실패</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">License_invalid_parameter_error</td><td style="border:1px solid #bbb;padding:8px 16px;">내부 파라미터 검증 실패</td></tr>
+</tbody>
+</table>
 
 문자열 변환: `license_error_code_to_string(code)`
 
 ---
 ## 6. 공개 API 요약
 
-| 함수 | 반환 | 설명 | 사전 조건 |
-|------|------|------|------------|
-| `License_error_code load_license_file(void)` | 에러코드 | 라이센스 파일 로드 및 검증 | `최초 1회 필수` 이후 라이센스 파일 확인 필요시 |
-| `int is_license_valid_period(void)` | 1/0 | 현재 시간이 만료 이전인지 검사 | `load_license_file()` 성공 후 |
-| `time_t get_license_expire_time(void)` | time_t | 만료 시간 (0=무제한) | 로드 후 |
-| `time_t get_license_create_date(void)` | time_t | 발급(요청) 시간 | 로드 후 |
-| `const char* license_error_code_to_string(code)` | 문자열 | 에러 코드→문자열 | 항상 사용 가능 |
+<table style="border-collapse:collapse;width:100%;font-size:15px;">
+<thead>
+<tr style="background:#001f4d;color:white;">
+<th style="border:1px solid #bbb;16px;text-align:center;">함수</th>
+<th style="border:1px solid #bbb;32;text-align:center;">반환</th>
+<th style="border:1px solid #bbb;120px;text-align:center;">설명</th>
+<th style="border:1px solid #bbb;16px;text-align:center;">사전 조건</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;"><code>License_error_code load_license_file(void)</code></td><td style="border:1px solid #bbb;padding:8px 16px;">에러 코드</td><td style="border:1px solid #bbb;padding:8px 16px;">라이센스 파일 로드 및 검증</td><td style="border:1px solid #bbb;padding:8px 16px;"><code>최초 1회 필수</code> 이후 라이센스 파일 확인 필요시</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;"><code>int is_license_valid_period(void)</code></td><td style="border:1px solid #bbb;padding:8px 16px;">1/0</td><td style="border:1px solid #bbb;padding:8px 16px;">현재 시간이 만료 이전인지 검사</td><td style="border:1px solid #bbb;padding:8px 16px;"><code>load_license_file()</code> 성공 후</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;"><code>time_t get_license_expire_time(void)</code></td><td style="border:1px solid #bbb;padding:8px 16px;">time_t</td><td style="border:1px solid #bbb;padding:8px 16px;">만료 시간 (0=무제한)</td><td style="border:1px solid #bbb;padding:8px 16px;">로드 후</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;"><code>time_t get_license_create_date(void)</code></td><td style="border:1px solid #bbb;padding:8px 16px;">time_t</td><td style="border:1px solid #bbb;padding:8px 16px;">발급(요청) 시간</td><td style="border:1px solid #bbb;padding:8px 16px;">로드 후</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;"><code>const char* license_error_code_to_string(code)</code></td><td style="border:1px solid #bbb;padding:8px 16px;">문자열</td><td style="border:1px solid #bbb;padding:8px 16px;">에러 코드→문자열</td><td style="border:1px solid #bbb;padding:8px 16px;">항상 사용 가능</td></tr>
+</tbody>
+</table>
 
 ---
 
@@ -148,11 +174,20 @@ typedef struct {
 ---
 ## 8. 보안 및 운영 상 주의사항
 
-| 항목 | 설명 | 권장 조치 |
-|------|------|-----------|
-| 키/패스프레이즈 | 현재 코드에 상수 포함 | 회의 후 변경 필요|
-| OpenSSL 버전 | 1.0.x vs 3.x API 차이 | CI에서 다중 버전 빌드 테스트 |
-| linux 하드웨어 종속 | `/sys` 경로 사용 | Windows / macOS 포팅 시 추상화 계층 추가 |
+<table style="border-collapse:collapse;width:100%;font-size:15px;">
+<thead>
+<tr style="background:#001f4d;color:white;">
+<th style="border:1px solid #bbb;padding:8px 16px;text-align:center;">항목</th>
+<th style="border:1px solid #bbb;padding:8px 16px;text-align:center;">설명</th>
+<th style="border:1px solid #bbb;padding:8px 16px;text-align:center;">권장 조치</th>
+</tr>
+</thead>
+<tbody>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">키/패스프레이즈</td><td style="border:1px solid #bbb;padding:8px 16px;">현재 코드에 상수 포함</td><td style="border:1px solid #bbb;padding:8px 16px;">회의 후 변경 필요</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">OpenSSL 버전</td><td style="border:1px solid #bbb;padding:8px 16px;">1.0.x vs 3.x API 차이</td><td style="border:1px solid #bbb;padding:8px 16px;">CI에서 다중 버전 빌드 테스트</td></tr>
+<tr><td style="border:1px solid #bbb;padding:8px 16px;">linux 하드웨어 종속</td><td style="border:1px solid #bbb;padding:8px 16px;"><code>/sys</code> 경로 사용</td><td style="border:1px solid #bbb;padding:8px 16px;">Windows / macOS 포팅 시 추상화 계층 추가</td></tr>
+</tbody>
+</table>
 
 ---
 ## 9. FAQ (요약)
