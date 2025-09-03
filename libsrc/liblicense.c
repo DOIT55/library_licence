@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/29 16:58:48 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/09/03 16:10:40 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@ static char* set_mac() {
     int fd = 0;
     DIR* dp = NULL;
     struct dirent* entry = NULL;
+    size_t mac_len = 0;
 
     dp = opendir(MAC_DIR);
     if (dp == NULL) {
@@ -66,11 +67,18 @@ static char* set_mac() {
 
     close(fd);
 
+    // Remove trailing newline if present
+    mac_len = strnlen(info.mac, sizeof(info.mac) - 1);
+    if (mac_len > 0 && info.mac[mac_len - 1] == '\n') {
+        info.mac[mac_len - 1] = '\0';
+    }
+
     return info.mac;
 }
 
 static char* set_uuid() {
     int fd = 0;
+    size_t uuid_len = 0;
 
     if (access(UUID_FILE_PATH, R_OK) != 0) {
         return NULL;
@@ -89,6 +97,12 @@ static char* set_uuid() {
     }
     close(fd);
 
+    // Remove trailing newline if present
+    uuid_len = strnlen(info.uuid, sizeof(info.uuid) - 1);
+    if (uuid_len > 0 && info.uuid[uuid_len - 1] == '\n') {
+        info.uuid[uuid_len - 1] = '\0';
+    }
+
     return info.uuid;
 }
 
@@ -98,33 +112,42 @@ static License_error_code set_sha256_signature() {
     EVP_MD_CTX* ctx = NULL;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
+    size_t mac_len = 0;
+    size_t uuid_len = 0;
+    unsigned char *p = buf;
 
     if (info.mac[0] == '\0' || info.aes_bin[0] == '\0') {
         printError(FLF, "Missing required fields");
         return Sha256_invalid_parameter_error;
     }
 
-    memcpy(buf, info.mac, MAX_MAC_LEN);
-    memcpy(buf + MAX_MAC_LEN, info.aes_bin, MAX_AES_BIN_LEN);
-    memcpy(buf + MAX_MAC_LEN + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
+    // Calculate actual lengths
+    mac_len = strnlen(info.mac, MAX_MAC_LEN);
+    uuid_len = strnlen(info.uuid, MAX_UUID_LEN);
+    
+    // Copy data with actual lengths
+    memcpy(p, info.mac, mac_len); p += mac_len;
+    memcpy(p, info.aes_bin, info.aes_len); p += info.aes_len;
+    memcpy(p, info.uuid, uuid_len);
+    
+    data_len = mac_len + info.aes_len + uuid_len;
 
     ctx = EVP_MD_CTX_new();
     if (!ctx) {
         return Sha256_create_error;
     }
 
-    if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1) {
+    if (!EVP_DigestInit_ex(ctx, EVP_sha256(), NULL)) {
         EVP_MD_CTX_free(ctx);
         return Sha256_init_error;
     }
 
-    data_len = sizeof(buf);
-    if (EVP_DigestUpdate(ctx, buf, data_len) != 1) {
+    if (!EVP_DigestUpdate(ctx, buf, data_len)) {
         EVP_MD_CTX_free(ctx);
         return Sha256_update_error;
     }
 
-    if (EVP_DigestFinal_ex(ctx, info.signature_sha256, NULL) != 1) {
+    if (!EVP_DigestFinal_ex(ctx, info.signature_sha256, NULL)) {
         EVP_MD_CTX_free(ctx);
         return Sha256_final_error;
     }
@@ -138,23 +161,32 @@ static License_error_code set_sha256_signature() {
     SHA256_CTX sha256;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
+    size_t mac_len = 0;
+    size_t uuid_len = 0;
+    unsigned char *p = buf;
 
-    if (info.mac == NULL || info.aes_bin == NULL) {
+    if (info.mac[0] == '\0' || info.aes_bin[0] == '\0') {
         return Sha256_invalid_parameter_error;
     }
 
-    memcpy(buf, info.mac, MAX_MAC_LEN);
-    memcpy(buf + data_len, info.aes_bin, MAX_AES_BIN_LEN);
-    memcpy(buf + data_len + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
+    // Calculate actual lengths
+    mac_len = strnlen(info.mac, MAX_MAC_LEN);
+    uuid_len = strnlen(info.uuid, MAX_UUID_LEN);
+    
+    // Copy data with actual lengths
+    memcpy(p, info.mac, mac_len); p += mac_len;
+    memcpy(p, info.aes_bin, info.aes_len); p += info.aes_len;
+    memcpy(p, info.uuid, uuid_len);
+    
+    data_len = mac_len + info.aes_len + uuid_len;
 
-    if (SHA256_Init(&sha256) == license_false) {
+    if (!SHA256_Init(&sha256)) {
         return Sha256_init_error;
     }
-    data_len = sizeof(buf);
-    if (SHA256_Update(&sha256, buf, data_len) == license_false) {
+    if (!SHA256_Update(&sha256, buf, data_len)) {
         return Sha256_update_error;
     }
-    if (SHA256_Final(info.sha256, &sha256) == license_false) {
+    if (!SHA256_Final(info.signature_sha256, &sha256)) {
         printError(FLF, "Failed to finalize SHA256");
         return Sha256_final_error;
     }
@@ -173,8 +205,8 @@ static License_error_code set_sha256_signature() {
  * @return plaintext_len || -1
  */
 static int decryptEVP(unsigned char* szKey, unsigned char* ciphertext, int ciphertext_len, unsigned char* plaintext) {
-    EVP_CIPHER_CTX* ctx;
-    int len;
+    EVP_CIPHER_CTX* ctx = NULL;
+    int len = 0;
     int plaintext_len = -1;
     unsigned char iv[33] = {0};
 

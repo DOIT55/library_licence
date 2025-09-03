@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:03:58 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/08/29 17:44:56 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/09/03 16:05:33 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -133,9 +133,8 @@ typedef enum {
  */
 License_error_code load_license_file();
 
-static const char* error_code[] = {FOREACH_ERROR_CODE_LIST(GENERATE_ERROR_CODE_STRING)};
-
 static inline const char* license_error_code_to_string(License_error_code code) {
+    static const char* error_code[] = {FOREACH_ERROR_CODE_LIST(GENERATE_ERROR_CODE_STRING)};
     int mask = code >> 31;
     return error_code[(code + mask) ^ mask];
 }
@@ -161,7 +160,7 @@ static inline int is_license_valid_period(){
 /**
  * @brief Executes the main feature operation after license verification.
  *
- * This function requires that is_license_valid() has been called at least once prior to its invocation.
+ * This function requires that is_license_valid_period() has been called at least once prior to its invocation.
  * Not verifying the license beforehand may lead to undefined behavior or security risks.
  *
  * @note The function load_license_file() must be called at least once before using this function,
@@ -177,14 +176,14 @@ static inline time_t get_license_expire_time() {
 /**
  * @brief Performs the main feature operation.
  * @details This function depends on prior license verification.
- *          You must call is_license_valid() at least once before invoking this function.
+ *          You must call is_license_valid_period() at least once before invoking this function.
  *          Failure to do so may result in undefined behavior or security violations.
  *
  * @note The function load_license_file() must be called at least once before using this function,
  *       as it relies on initialized license data.
  * @see load_license_file()
  *
- * @see is_license_valid()
+ * @see is_license_valid_period()
  * @return request time
  */
 static inline time_t get_license_create_date() {
