@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/23 22:39:22 by HaJuYoung (juha)  #+#    #+#             */
-/*   Updated: 2025/08/29 14:59:47 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/09/03 15:53:28 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,33 +56,41 @@ static License_error_code set_sha256_signature() {
     EVP_MD_CTX* ctx = NULL;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
+    size_t mac_len, uuid_len;
+    unsigned char *p = buf;
 
     if (info.mac[0] == '\0' || info.aes_bin[0] == '\0') {
         printError(FLF, "Missing required fields");
         return Sha256_invalid_parameter_error;
     }
 
-    memcpy(buf, info.mac, MAX_MAC_LEN);
-    memcpy(buf + MAX_MAC_LEN, info.aes_bin, MAX_AES_BIN_LEN);
-    memcpy(buf + MAX_MAC_LEN + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
+    // Calculate actual lengths
+    mac_len = strnlen(info.mac, MAX_MAC_LEN);
+    uuid_len = strnlen(info.uuid, MAX_UUID_LEN);
+    
+    // Copy data with actual lengths
+    memcpy(p, info.mac, mac_len); p += mac_len;
+    memcpy(p, info.aes_bin, info.aes_len); p += info.aes_len;
+    memcpy(p, info.uuid, uuid_len);
+    
+    data_len = mac_len + info.aes_len + uuid_len;
 
     ctx = EVP_MD_CTX_new();
     if (!ctx) {
         return Sha256_create_error;
     }
 
-    if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1) {
+    if (!EVP_DigestInit_ex(ctx, EVP_sha256(), NULL)) {
         EVP_MD_CTX_free(ctx);
         return Sha256_init_error;
     }
 
-    data_len = sizeof(buf);
-    if (EVP_DigestUpdate(ctx, buf, data_len) != 1) {
+    if (!EVP_DigestUpdate(ctx, buf, data_len)) {
         EVP_MD_CTX_free(ctx);
         return Sha256_update_error;
     }
 
-    if (EVP_DigestFinal_ex(ctx, info.signature_sha256, NULL) != 1) {
+    if (!EVP_DigestFinal_ex(ctx, info.signature_sha256, NULL)) {
         EVP_MD_CTX_free(ctx);
         return Sha256_final_error;
     }
@@ -96,23 +104,31 @@ static License_error_code set_sha256_signature() {
     SHA256_CTX sha256;
     unsigned char buf[MAX_MAC_LEN + MAX_AES_BIN_LEN + MAX_UUID_LEN] = {0};
     size_t data_len = 0;
+    size_t mac_len, uuid_len;
+    unsigned char *p = buf;
 
-    if (info.mac == NULL || info.aes_bin == NULL) {
+    if (info.mac[0] == '\0' || info.aes_bin[0] == '\0') {
         return Sha256_invalid_parameter_error;
     }
 
-    memcpy(buf, info.mac, MAX_MAC_LEN);
-    memcpy(buf + data_len, info.aes_bin, MAX_AES_BIN_LEN);
-    memcpy(buf + data_len + MAX_AES_BIN_LEN, info.uuid, MAX_UUID_LEN);
+    // Calculate actual lengths
+    mac_len = strnlen(info.mac, MAX_MAC_LEN);
+    uuid_len = strnlen(info.uuid, MAX_UUID_LEN);
+    
+    // Copy data with actual lengths
+    memcpy(p, info.mac, mac_len); p += mac_len;
+    memcpy(p, info.aes_bin, info.aes_len); p += info.aes_len;
+    memcpy(p, info.uuid, uuid_len);
+    
+    data_len = mac_len + info.aes_len + uuid_len;
 
-    if (SHA256_Init(&sha256) == license_false) {
+    if (!SHA256_Init(&sha256)) {
         return Sha256_init_error;
     }
-    data_len = sizeof(buf);
-    if (SHA256_Update(&sha256, buf, data_len) == license_false) {
+    if (!SHA256_Update(&sha256, buf, data_len)) {
         return Sha256_update_error;
     }
-    if (SHA256_Final(info.signature_sha256, &sha256) == license_false) {
+    if (!SHA256_Final(info.signature_sha256, &sha256)) {
         return Sha256_final_error;
     }
     return License_result_success;
@@ -130,9 +146,9 @@ static License_error_code set_sha256_signature() {
  * @return
  */
 static int encryptEVP(unsigned char* key, unsigned char* plaintext, int plaintext_len, unsigned char* ciphertext) {
-    EVP_CIPHER_CTX* ctx;
-    int len;
-    int ciphertext_len;
+    EVP_CIPHER_CTX* ctx = NULL;
+    int len = 0;
+    int ciphertext_len = 0;
     unsigned char iv[33] = {0};
 
     if (strlen((char*)key) < 32) {
@@ -214,6 +230,7 @@ static char* set_mac() {
     int fd = 0;
     DIR* dp = NULL;
     struct dirent* entry = NULL;
+    size_t mac_len;
 
     dp = opendir(MAC_DIR);
     if (dp == NULL) {
@@ -247,11 +264,18 @@ static char* set_mac() {
 
     close(fd);
 
+    // Remove trailing newline if present
+    mac_len = strnlen(info.mac, sizeof(info.mac) - 1);
+    if (mac_len > 0 && info.mac[mac_len - 1] == '\n') {
+        info.mac[mac_len - 1] = '\0';
+    }
+
     return info.mac;
 }
 
 static char* set_uuid() {
     int fd = 0;
+    size_t uuid_len = 0;
 
     if (access(UUID_FILE_PATH, R_OK) != 0) {
         return NULL;
@@ -269,6 +293,12 @@ static char* set_uuid() {
         return NULL;
     }
     close(fd);
+
+    // Remove trailing newline if present
+    uuid_len = strnlen(info.uuid, sizeof(info.uuid) - 1);
+    if (uuid_len > 0 && info.uuid[uuid_len - 1] == '\n') {
+        info.uuid[uuid_len - 1] = '\0';
+    }
 
     return info.uuid;
 }
@@ -329,10 +359,13 @@ static License_error_code set_options(int argc, char** argv) {
 
 int main(int argc, char** argv) {
     unsigned char passphrase[65] = "012345678901234567890123456789012";
-    printf("%s\n", OPENSSL_VERSION_TEXT);
     char buf[SHA256_DIGEST_LENGTH + MAX_AES_BIN_LEN] = {0};
     char path[232] = {0};
     char cmd[256] = {0};
+    time_t create_time = 0;
+    time_t expire_time = 0;
+
+    printf("%s\n", OPENSSL_VERSION_TEXT);
 
     if ((argc > 7) 
     || (set_options(argc, argv) != License_result_success)) {
@@ -353,8 +386,8 @@ int main(int argc, char** argv) {
     save_file(buf, SHA256_DIGEST_LENGTH + info.aes_len, path, O_WRONLY | O_CREAT | O_TRUNC);
 
     // packed 구조체 멤버 주소 문제 해결: 임시 변수 사용
-    time_t create_time = info.crypt_info.request_time;
-    time_t expire_time = info.crypt_info.expire_time;
+    create_time = info.crypt_info.request_time;
+    expire_time = info.crypt_info.expire_time;
 
     printf(COLOR_GREEN "license create time : %s\n", ctime(&create_time));
     if (expire_time == 0) {

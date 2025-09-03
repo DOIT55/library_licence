@@ -1,6 +1,6 @@
 NAME = license_generator
 CC = cc
-CFLAGS = -Wall -Wextra -Werror #-g3 -fsanitize=address # sha256 is not supported in -Werror
+CFLAGS = -Wall -Wextra -Werror -fPIE -g3 -fsanitize=address # sha256 is not supported in -Werror
 INCLUDE = -I../include
 LDFLAGS = -llicense -lssl -lcrypto -lpthread -ldl
 LIBRARY = -L../lib 

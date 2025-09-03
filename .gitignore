@@ -48,5 +48,7 @@ code_generator
 license_creator
 .license
 .license_generator
-test_main
+main_test
 .vscode
+*.original
+*.backup
