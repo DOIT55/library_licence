@@ -6,7 +6,7 @@
 /*   By: HaJuYoung(juha) <jy.h4456@arielnetworks.co +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/20 12:02:29 by HaJuYoung(juha)   #+#    #+#             */
-/*   Updated: 2025/09/03 16:10:40 by HaJuYoung(juha)  ###   ########.fr       */
+/*   Updated: 2025/09/08 12:13:41 by HaJuYoung(juha)  ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,7 +67,6 @@ static char* set_mac() {
 
     close(fd);
 
-    // Remove trailing newline if present
     mac_len = strnlen(info.mac, sizeof(info.mac) - 1);
     if (mac_len > 0 && info.mac[mac_len - 1] == '\n') {
         info.mac[mac_len - 1] = '\0';
@@ -97,7 +96,6 @@ static char* set_uuid() {
     }
     close(fd);
 
-    // Remove trailing newline if present
     uuid_len = strnlen(info.uuid, sizeof(info.uuid) - 1);
     if (uuid_len > 0 && info.uuid[uuid_len - 1] == '\n') {
         info.uuid[uuid_len - 1] = '\0';
@@ -121,11 +119,9 @@ static License_error_code set_sha256_signature() {
         return Sha256_invalid_parameter_error;
     }
 
-    // Calculate actual lengths
     mac_len = strnlen(info.mac, MAX_MAC_LEN);
     uuid_len = strnlen(info.uuid, MAX_UUID_LEN);
     
-    // Copy data with actual lengths
     memcpy(p, info.mac, mac_len); p += mac_len;
     memcpy(p, info.aes_bin, info.aes_len); p += info.aes_len;
     memcpy(p, info.uuid, uuid_len);
@@ -169,11 +165,9 @@ static License_error_code set_sha256_signature() {
         return Sha256_invalid_parameter_error;
     }
 
-    // Calculate actual lengths
     mac_len = strnlen(info.mac, MAX_MAC_LEN);
     uuid_len = strnlen(info.uuid, MAX_UUID_LEN);
     
-    // Copy data with actual lengths
     memcpy(p, info.mac, mac_len); p += mac_len;
     memcpy(p, info.aes_bin, info.aes_len); p += info.aes_len;
     memcpy(p, info.uuid, uuid_len);
